@@ -3,13 +3,13 @@ program clientdemo;
 {$mode objfpc}{$H+}
 
 uses
-  {$IFDEF UNIX}{$IFDEF UseCThreads}
+  {$IFDEF UNIX}
   cthreads,
-  {$ENDIF}{$ENDIF}
+  {$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms,
   mainclient,
-  sc_info;
+  sc_info, cp_info;
   { you can add units after this }
 
 {$R *.res}
@@ -19,6 +19,7 @@ begin
   Application.Initialize;
   Application.CreateForm(TFormClient, FormClient);
   Application.CreateForm(TSmartConnectInfo, SmartConnectInfo);
+  Application.CreateForm(TParamsConnectInfo, ParamsConnectInfo);
   Application.Run;
 end.
 
