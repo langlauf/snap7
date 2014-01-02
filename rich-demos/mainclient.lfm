@@ -1,7 +1,7 @@
 object FormClient: TFormClient
-  Left = 288
+  Left = 245
   Height = 664
-  Top = 131
+  Top = 141
   Width = 753
   BorderIcons = [biSystemMenu, biMinimize, biMaximize, biHelp]
   Caption = 'FormClient'
@@ -80,7 +80,7 @@ object FormClient: TFormClient
     Height = 531
     Top = 110
     Width = 753
-    ActivePage = TabSheet6
+    ActivePage = TabSecurity
     Align = alBottom
     Anchors = [akTop, akBottom]
     Font.Color = clWindowText
@@ -88,7 +88,7 @@ object FormClient: TFormClient
     Font.Name = 'Sans'
     MultiLine = True
     ParentFont = False
-    TabIndex = 0
+    TabIndex = 9
     TabOrder = 4
     OnChange = PageControlChange
     Options = [nboMultiLine]
