@@ -30,3 +30,4 @@ On a 64-bit Windows operating system:
 Finally, to run these demos you need the correct binary library (libsnap7.so or snap7.dll) either 32 or 64 bit.
 Please copy them from release/<platform> folder to /usr/lib (unix) or to winbin folder (windows).
 
+Snap7.net.dll was build with Visual Studio 2012 .NET Framework 4.5 AnyCPU **You need to recompile it** if using a different framework.

@@ -14,7 +14,7 @@ MINREL   =4.7.1
 #
 CPP      = g++.exe
 CC       = gcc.exe
-LIBS     = -L"$(MINGW)/lib" -static-libgcc ../../../build/bin/win64/snap7.lib 
+LIBS     = -L"$(MINGW)/lib" -static-libgcc snap7.lib 
 INCS     = -I"$(MINGW)/include" -I"../"
 CXXINCS  = -I"$(MINGW)/include" -I"../"
 CXXFLAGS = -O3 $(CXXINCS) 

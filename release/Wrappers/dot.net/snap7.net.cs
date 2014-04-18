@@ -891,10 +891,10 @@ namespace Snap7
         }
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Cli_PlcGetStatus(IntPtr Client, ref Int32 Status);
+        protected static extern int Cli_GetPlcStatus(IntPtr Client, ref Int32 Status);
         public int PlcGetStatus(ref Int32 Status)
         {
-            return Cli_PlcGetStatus(Client, ref Status);
+            return Cli_GetPlcStatus(Client, ref Status);
         }
 
         #endregion

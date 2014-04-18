@@ -21,6 +21,7 @@ LinkOptions            :=  -O3
 IncludePath            :=  $(IncludeSwitch). $(IncludeSwitch)../../src/sys $(IncludeSwitch)../../src/core $(IncludeSwitch)../../src/lib 
 Libs                   := $(LibrarySwitch)thread $(LibrarySwitch)nsl $(LibrarySwitch)socket 
 LibPath                := $(LibraryPathSwitch). 
+LibInstall             := /usr/lib
 
 ##
 ## Common variables (CXXFLAGS varies across platforms)
@@ -105,5 +106,5 @@ clean:
 	$(RM) $(OutputFile)
 
 install: all
-	cp -f $(OutputFile) /usr/lib
+	cp -f $(OutputFile) $(LibInstall)
 

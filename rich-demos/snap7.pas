@@ -1,5 +1,5 @@
 (*=============================================================================|
-|  PROJECT SNAP7                                                         1.2.0 |
+|  PROJECT SNAP7                                                         1.2.1 |
 |==============================================================================|
 |  Copyright (C) 2013, 2014 Davide Nardella                                    |
 |  All rights reserved.                                                        |
@@ -176,9 +176,17 @@ Const
 // Word Length
   S7WLBit     = $01;
   S7WLByte    = $02;
+  S7WLChar    = $03;
   S7WLWord    = $04;
+  S7WLInt     = $05;
   S7WLDWord   = $06;
+  S7WLDInt    = $07;
   S7WLReal    = $08;
+  S7WLDate    = $09;
+  S7WLTOD     = $0A;
+  S7WLTime    = $0B;
+  S7WLS5Time  = $0C;
+  S7WLDT      = $0F;
   S7WLCounter = $1C;
   S7WLTimer   = $1D;
 // Block type

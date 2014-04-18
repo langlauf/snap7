@@ -9,6 +9,9 @@
         <Filename Value="serverdemo.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="serverdemo"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="19" Y="5"/>
         <UsageCount Value="21"/>
       </Unit0>
       <Unit1>

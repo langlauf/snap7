@@ -1,8 +1,67 @@
-======================================================================[2014-01-02]
-Version 1.2.0 - New platform release (fully compatible with 1.0.0)
+======================================================================[2014-04-17]
+Version 1.2.1 - Bugfix/Small changes release (fully compatible with 1.0.0)
+----------------------------------------------------------------------------------
+- Some small Apple Mac OSX changes (Tested under OSX 10.9.1 Mavericks)
+- Some bug fixed
+- Documentation updated.
+
+- Some OLD/RARELY USED libraries are not longer deployed.
+  but *THEY ARE STILL TESTED AND SUPPORTED*
+
+  If you don't have the way to rebuild Snap7 in these platforms please contact me 
+  and I will try to help you.
+
+  They are :
+  - Linux i386/x86_64 GLIBC 2.11 up to 2.15  
+  - Linux ARMHF BeagleBone Black, CubieBoard 2, PcDuino.
+
+- A new Linux distro is supported (Ubuntu 14.04 LTS and derivatives GLIBC 2.19)
+
+- Old Windows Platforms are still fully supported but you will find them into
+  \release\windows\Legacy\Win32 and Win64.
+
+  This because many people had problems with .NET environment (which doesn't like
+  non-Microsoft Libraries on some platforms), so the official Windows libraries are
+  now compiled with Visual Studio.
+
+  If you plan to use MinGW64, use Legacy libraries (wich work fine up to Windows 8).
+
+==================================================================================
+
+[Changed]
+
+- Unix, now it's possible to specify the destination folder of the library using the
+  optional param LibInstall=<NewPath> into the make command line. If not specified
+  the default path is /usr/lib.
+  (thanks to Gijs Molenaar)
+
+- Apple OSX, now the library suffix is .dylib instead of .so
+  however it's possible override the suffix using the LibExt param (see doc.)
+  (thanks to Gijs Molenaar)
+
+[fixed]
+
+- Fixed a typo error into snap7.net.cs (Cli_GetPlcStatus)
+  (Thanks to Dabbadoeber for reporting)
+
+- Fixed a bug into s7_micro_client.cpp into block download function.
+  (Thanks to Mark Konst for reporting)
+
+- fixed a bug into s7_partner.cpp (issues for transfers>PDU size)
+  (Thanks to Volker Sarnes)
+
+- fixed a bug into s7_server.cpp (wrong bit access)
+  (Thanks to Thomas Costa)
+
+- little modification to client.cs and ppartner.cs to be compiled with VS2008 which
+  doesn't handle the constant (default) parameter in a method declaration.
+  (thanks to Max Schaetzel for reporting) 
+
+
+======================================================================[2014-01-01]
+Version 1.2.0 - New Minor platform release (fully compatible with 1.0.0)
 ----------------------------------------------------------------------------------
 - Apple Mac OSX support (Tested under OSX 10.9.1 Mavericks)
-- UDOO Quad support
 - Some bug fixed
 - Documentation improved and updated.
 ==================================================================================
@@ -12,10 +71,6 @@ Version 1.2.0 - New platform release (fully compatible with 1.0.0)
 - Apple OSX full support :
   makefiles, source examples, binary library and binary demos supplied.
   new osx folders added in the entire project. 
-
-- UDOO Quad (Linux board Freescale i.MX 6 Quad based) full support.
-  Added /release/Linux/ARMHF/Udoo folder with libsnap7.so compiled under 
-  Ubuntu 12.10.
 
 [fixed]
 
@@ -38,7 +93,7 @@ Version 1.2.0 - New platform release (fully compatible with 1.0.0)
 
 
 ======================================================================[2013-11-10]
-Version 1.1.0 - New hardware release (fully compatible with 1.0.0)
+Version 1.1.0 - New Minor hardware release (fully compatible with 1.0.0)
 ----------------------------------------------------------------------------------
 - LOGO 0BA7 Ethernet support (as client/server and Network I/O blocks)
 - S7200 (via CP243) experimental support

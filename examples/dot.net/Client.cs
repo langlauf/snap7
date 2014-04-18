@@ -83,11 +83,12 @@ class ClientDemo
     // HexDump, a very nice function, it's not mine.
     // I found it on the net somewhere some time ago... thanks to the author ;-)
     //------------------------------------------------------------------------------
-    static void HexDump(byte[] bytes, int Size, int bytesPerLine = 16)
+    static void HexDump(byte[] bytes, int Size)
     {
         if (bytes == null) 
             return;
         int bytesLength = Size;
+        int bytesPerLine = 16;
 
         char[] HexChars = "0123456789ABCDEF".ToCharArray();
 

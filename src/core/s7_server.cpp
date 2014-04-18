@@ -1,5 +1,5 @@
 /*=============================================================================|
-|  PROJECT SNAP7                                                         1.2.0 |
+|  PROJECT SNAP7                                                         1.2.1 |
 |==============================================================================|
 |  Copyright (C) 2013, 2014 Davide Nardella                                    |
 |  All rights reserved.                                                        |
@@ -260,6 +260,23 @@ bool TS7Worker::PerformPDUUsrData(int &Size)
     };
     return Result;
 }
+//------------------------------------------------------------------------------
+int TS7Worker::DataSizeByte(int WordLength)
+{
+	switch (WordLength){
+		case S7WLBit     : return 1;  // S7 sends 1 byte per bit
+		case S7WLByte    : return 1;
+		case S7WLChar    : return 1;
+		case S7WLWord    : return 2;
+		case S7WLDWord   : return 4;
+		case S7WLInt     : return 2;
+		case S7WLDInt    : return 4;
+		case S7WLReal    : return 4;
+		case S7WLCounter : return 2;
+		case S7WLTimer   : return 2;
+		default          : return 0;
+     }
+}
 //==============================================================================
 // FUNCTION READ
 //==============================================================================
@@ -308,7 +325,7 @@ word TS7Worker::ReadArea(PResFunReadItem ResItemData, PReqFunReadItem ReqItemPar
      int &PDURemainder, TEv &EV)
 {
     PS7Area P;
-    word DBNum;
+	word DBNum;
     longword Start, Size, ASize;
 	longword OriginalSize;
     longword *PAdd;
@@ -339,17 +356,9 @@ word TS7Worker::ReadArea(PResFunReadItem ResItemData, PReqFunReadItem ReqItemPar
     pcs=P->cs;
 
     // Calcs the amount
-    switch (ReqItemPar->TransportSize)
-    {
-        case S7WLBit     : Multiplier=1; break;
-        case S7WLByte    : Multiplier=1; break;
-        case S7WLWord    : Multiplier=2; break;
-        case S7WLDWord   : Multiplier=4; break;
-        case S7WLReal    : Multiplier=4; break;
-        case S7WLTimer   : Multiplier=2; break;  // Timers and counters are word
-        case S7WLCounter : Multiplier=2; break;
-        default : return RA_OutOfRange(ResItemData, EV);
-    }
+	Multiplier = DataSizeByte(ReqItemPar->TransportSize);
+	if (Multiplier==0)
+		return RA_OutOfRange(ResItemData, EV);
 
     // Checks timers/counters coherence
     if ((ReqItemPar->Area==S7AreaTM) ^ (ReqItemPar->TransportSize==S7WLTimer))
@@ -372,22 +381,31 @@ word TS7Worker::ReadArea(PResFunReadItem ResItemData, PReqFunReadItem ReqItemPar
     else
         PDURemainder-=Size;
 
-    // More then 1 bit is not supported by S7 CPU (OriginalSize and not Size)
+    // More then 1 bit is not supported by S7 CPU (we use OriginalSize and not Size)
     if ((ReqItemPar->TransportSize==S7WLBit) && (OriginalSize>1))
         return RA_OutOfRange(ResItemData, EV);
 
-    // Calcs the start point
+	// Calcs the start point
     PAdd=(longword*)(&ReqItemPar->Area);   // points to area since we need 4 bytes for a pointer
     Start=SwapDWord(*PAdd & 0xFFFFFF00);
 
-    // Checks if (the address is not multiple of 8 when transport size is not bit
-    if ((ReqItemPar->TransportSize!=S7WLBit) && ((Start % 8) !=0 ))
-        return RA_OutOfRange(ResItemData, EV);
+    // Checks if the address is not multiple of 8 when transport size is neither bit nor timer nor counter
+    if (
+		(ReqItemPar->TransportSize!=S7WLBit) &&
+		(ReqItemPar->TransportSize!=S7WLTimer) &&
+		(ReqItemPar->TransportSize!=S7WLCounter) &&
+		((Start % 8) !=0)
+	   )
+		return RA_OutOfRange(ResItemData, EV);
 
-    BitIndex  =Start & 0x07; // start bit
-    Start     =Start >> 3;   // start byte
-    EV.EvStart=Start;
-    // Checks bounds
+	if ((ReqItemPar->TransportSize!=S7WLCounter) && (ReqItemPar->TransportSize!=S7WLTimer))
+	{
+		BitIndex  =Start & 0x07; // start bit
+		Start     =Start >> 3;   // start byte
+	}
+
+	EV.EvStart=Start;
+	// Checks bounds
     ASize=P->Size; // Area size
     if (Start+Size>ASize)
         return RA_OutOfRange(ResItemData, EV);
@@ -419,10 +437,16 @@ word TS7Worker::ReadArea(PResFunReadItem ResItemData, PReqFunReadItem ReqItemPar
           ResItemData->DataLength=SwapWord(Size);
         };break;
       case S7WLByte:
-      case S7WLWord:
-      case S7WLDWord:
+	  case S7WLWord:
+	  case S7WLDWord:
         {
           ResItemData->TransportSize=TS_ResByte;
+          ResItemData->DataLength=SwapWord(Size*8);
+        };break;
+	  case S7WLInt:
+	  case S7WLDInt:
+        {
+          ResItemData->TransportSize=TS_ResInt;
           ResItemData->DataLength=SwapWord(Size*8);
         };break;
       case S7WLReal:
@@ -430,11 +454,17 @@ word TS7Worker::ReadArea(PResFunReadItem ResItemData, PReqFunReadItem ReqItemPar
           ResItemData->TransportSize=TS_ResReal;
           ResItemData->DataLength=SwapWord(Size);
         };break;
+      case S7WLChar:
       case S7WLTimer:
       case S7WLCounter:
         {
           ResItemData->TransportSize=TS_ResOctet;
 		  ResItemData->DataLength=SwapWord(Size);
+        };break;
+      default : 
+        {
+          ResItemData->TransportSize=TS_ResByte;
+          ResItemData->DataLength=SwapWord(Size*8);
         };break;
     }
     EV.EvRetCode=evrNoError;
@@ -454,9 +484,9 @@ bool TS7Worker::PerformFunctionRead()
     PDURemainder;
     TEv EV;
 
-    PDURemainder=FPDULength;
+	PDURemainder=FPDULength;
     // Stage 1 : Setup pointers and initial check
-    ReqParams=PReqFunReadParams(pbyte(PDUH_in)+sizeof(TS7ReqHeader));
+	ReqParams=PReqFunReadParams(pbyte(PDUH_in)+sizeof(TS7ReqHeader));
     ResParams=PResFunReadParams(pbyte(&Answer)+ResHeaderSize23);        // Params after the header
 
     // trunk to 20 max items.
@@ -471,7 +501,7 @@ bool TS7Worker::PerformFunctionRead()
     for (c = 0; c < ItemsCount; c++)
 	{
 		ResData[c]=PResFunReadItem(pbyte(ResParams)+Offset);
-        ItemSize=ReadArea(ResData[c],&ReqParams->Items[c],PDURemainder, EV);
+		ItemSize=ReadArea(ResData[c],&ReqParams->Items[c],PDURemainder, EV);
         Offset+=(ItemSize+4);
         // For multiple items we have to create multiple events
         if (ItemsCount>1)
@@ -556,19 +586,11 @@ byte TS7Worker::WriteArea(PReqFunWriteDataItem ReqItemData, PReqFunWriteItem Req
         return WA_NotFound(EV);
 
     pcs=P->cs;
-
+	
     // Calcs the amount
-    switch(ReqItemPar->TransportSize)
-    {
-        case S7WLBit     : Multiplier=1;break;
-        case S7WLByte    : Multiplier=1;break;
-        case S7WLWord    : Multiplier=2;break;
-        case S7WLDWord   : Multiplier=4;break;
-        case S7WLReal    : Multiplier=4;break;
-        case S7WLTimer   : Multiplier=2;break;  // Timers and counters are word
-        case S7WLCounter : Multiplier=2;break;
-        default          : return WA_InvalidTransportSize(EV);
-    };
+	Multiplier = DataSizeByte(ReqItemPar->TransportSize);
+	if (Multiplier==0)
+		return WA_InvalidTransportSize(EV);
 
     // Checks timers/counters coherence
     if ((ReqItemPar->Area==S7AreaTM) ^ (ReqItemPar->TransportSize==S7WLTimer))
@@ -585,18 +607,27 @@ byte TS7Worker::WriteArea(PReqFunWriteDataItem ReqItemData, PReqFunWriteItem Req
     if ((ReqItemPar->TransportSize==S7WLBit) && (Size>1))
         return WA_OutOfRange(EV);
 
-    // Calcs the start point
+    // Calcs the start point ??
     PAdd=(longword*)&ReqItemPar->Area;   // points to area since we need 4 bytes for a pointer
     Start=SwapDWord(*PAdd & 0xFFFFFF00);
 
-    // Checks if (the address is not multiple of 8 when transport size is not bit
-    if ((ReqItemPar->TransportSize!=S7WLBit) && ((Start % 8) != 0))
-        return WA_OutOfRange(EV);
+    // Checks if the address is not multiple of 8 when transport size is neither bit nor timer nor counter
+    if (
+		(ReqItemPar->TransportSize!=S7WLBit) && 
+		(ReqItemPar->TransportSize!=S7WLTimer) && 
+		(ReqItemPar->TransportSize!=S7WLCounter) && 
+		((Start % 8) !=0)
+	   )
+		return WA_OutOfRange(EV);
 
-    BitIndex   =Start & 0x07; // start bit
-    Start      =Start >> 3;      // start byte
-    EV.EvStart =Start;
-    // Checks bounds
+	if ((ReqItemPar->TransportSize!=S7WLCounter) && (ReqItemPar->TransportSize!=S7WLTimer))
+	{
+		BitIndex  =Start & 0x07; // start bit
+		Start     =Start >> 3;   // start byte
+	}
+
+	EV.EvStart =Start;
+	// Checks bounds
     ASize=P->Size; // Area size
     if (Start+Size>ASize)
         return WA_OutOfRange(EV);
@@ -606,8 +637,8 @@ byte TS7Worker::WriteArea(PReqFunWriteDataItem ReqItemData, PReqFunWriteItem Req
     // Checks data size coherence
     DataLen=SwapWord(ReqItemData->DataLength);
 
-	if (ReqItemData->TransportSize==TS_ResByte)
-        DataLen=DataLen / 8;
+	if ((ReqItemData->TransportSize!=TS_ResOctet) && (ReqItemData->TransportSize!=TS_ResReal) && (ReqItemData->TransportSize!=TS_ResBit))
+		DataLen=DataLen / 8;
 
 	if (DataLen!=Size)
         return WA_DataSizeMismatch(EV);
@@ -617,11 +648,11 @@ byte TS7Worker::WriteArea(PReqFunWriteDataItem ReqItemData, PReqFunWriteItem Req
       if ((ReqItemData->Data[0] & 0x01) != 0)   // bit set
           *Target=*Target | BitMask[BitIndex];
       else                                           // bit reset
-          *Target=*Target & (!BitMask[BitIndex]);
+		  *Target=*Target & (~BitMask[BitIndex]);
     }
-    else {
-      // Lock the area
-        pcs->Enter();
+	else {
+	  // Lock the area
+		pcs->Enter();
         // Write Data
         memcpy(Target, &ReqItemData->Data[0], Size);
         pcs->Leave();

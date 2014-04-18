@@ -80,7 +80,7 @@ object FormClient: TFormClient
     Height = 531
     Top = 110
     Width = 753
-    ActivePage = TabSecurity
+    ActivePage = TabSheet1
     Align = alBottom
     Anchors = [akTop, akBottom]
     Font.Color = clWindowText
@@ -88,7 +88,7 @@ object FormClient: TFormClient
     Font.Name = 'Sans'
     MultiLine = True
     ParentFont = False
-    TabIndex = 9
+    TabIndex = 1
     TabOrder = 4
     OnChange = PageControlChange
     Options = [nboMultiLine]
@@ -561,18 +561,26 @@ object FormClient: TFormClient
         ItemHeight = 14
         ItemIndex = 1
         Items.Strings = (
-          'S7WLBit       '
-          'S7WLByte    '
-          'S7WLWord   '
-          'S7WLDword '
-          'S7WLReal    '
+          'S7WLBit'
+          'S7WLByte'
+          'S7WLChar'
+          'S7WLWord'
+          'S7WLInt'
+          'S7WLDWord'
+          'S7WLDInt'
+          'S7WLReal'
+          'S7WLDate'
+          'S7WLTOD'
+          'S7WLTime'
+          'S7WLS5Time'
+          'S7WLDT'
           'S7WLCounter'
           'S7WLTimer'
         )
         OnChange = CbAreaChange
         Style = csDropDownList
         TabOrder = 5
-        Text = 'S7WLByte    '
+        Text = 'S7WLByte'
       end
     end
     object TabSheet3: TTabSheet

@@ -436,12 +436,26 @@ const
     S7AreaDB, S7AreaPE, S7AreaPA, S7AreaMK, S7AreaTM, S7AreaCT
   );
 
-  WLenOf : array[0..6] of integer = (
-    S7WLBit, S7WLByte, S7WLWord, S7WLDword, S7WLReal, S7WLCounter, S7WLTimer
+  WLenOf : array[0..14] of integer = (
+    S7WLBit,
+    S7WLByte,
+    S7WLChar,
+    S7WLWord,
+    S7WLInt,
+    S7WLDWord,
+    S7WLDInt,
+    S7WLReal,
+    S7WLDate,
+    S7WLTOD,
+    S7WLTime,
+    S7WLS5Time,
+    S7WLDT,
+    S7WLCounter,
+    S7WLTimer
   );
 
-  SizeByte : array[0..6] of integer = (
-    1, 1, 2, 4, 4, 2, 2
+  SizeByte : array[0..14] of integer = (
+    1, 1, 1, 2, 2, 4, 4, 4, 2, 4, 4, 2, 8, 2, 2
   );
 
   BlockOf : array[0..6] of integer = (
@@ -1134,10 +1148,10 @@ end;
 
 procedure TFormClient.CheckArea;
 begin
-  LblArea.Visible:=((CbArea.ItemIndex=4) and (cbWLen.ItemIndex<>6)) or
-                   ((CbArea.ItemIndex=5) and (cbWLen.ItemIndex<>5)) or
-                   ((CbArea.ItemIndex<>4) and (cbWLen.ItemIndex=6)) or
-                   ((CbArea.ItemIndex<>5) and (cbWLen.ItemIndex=5));
+  LblArea.Visible:=((CbArea.ItemIndex=4) and (cbWLen.ItemIndex<>14)) or
+                   ((CbArea.ItemIndex=5) and (cbWLen.ItemIndex<>13)) or
+                   ((CbArea.ItemIndex<>4) and (cbWLen.ItemIndex=14)) or
+                   ((CbArea.ItemIndex<>5) and (cbWLen.ItemIndex=13));
 end;
 
 procedure TFormClient.ChkFullClick(Sender: TObject);

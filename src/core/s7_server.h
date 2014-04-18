@@ -1,5 +1,5 @@
 /*=============================================================================|
-|  PROJECT SNAP7                                                         1.2.0 |
+|  PROJECT SNAP7                                                         1.2.1 |
 |==============================================================================|
 |  Copyright (C) 2013, 2014 Davide Nardella                                    |
 |  All rights reserved.                                                        |
@@ -125,6 +125,7 @@ private:
     bool CheckPDU_in(int PayloadSize);
     void FillTime(PS7Time PTime);
 protected:
+    int DataSizeByte(int WordLength);
     bool ExecuteRecv();
     void DoEvent(longword Code, word RetCode, word Param1, word Param2,
       word Param3, word Param4);

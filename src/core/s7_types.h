@@ -1,5 +1,5 @@
 /*=============================================================================|
-|  PROJECT SNAP7                                                         1.2.0 |
+|  PROJECT SNAP7                                                         1.2.1 |
 |==============================================================================|
 |  Copyright (C) 2013, 2014 Davide Nardella                                    |
 |  All rights reserved.                                                        |
@@ -50,8 +50,11 @@ const int MaxVars     = 20;
 
 const int S7WLBit     = 0x01;
 const int S7WLByte    = 0x02;
+const int S7WLChar    = 0x03;
 const int S7WLWord    = 0x04;
+const int S7WLInt     = 0x05;
 const int S7WLDWord   = 0x06;
+const int S7WLDInt    = 0x07;
 const int S7WLReal    = 0x08;
 const int S7WLCounter = 0x1C;
 const int S7WLTimer   = 0x1D;
@@ -208,6 +211,7 @@ const word Code7DataOverPDU   		= 0x8500;
 // Result transport size
 const byte TS_ResBit   = 0x03;
 const byte TS_ResByte  = 0x04;
+const byte TS_ResInt   = 0x05;
 const byte TS_ResReal  = 0x07;
 const byte TS_ResOctet = 0x09;
 
