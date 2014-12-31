@@ -1,1 +1,1 @@
-Compiled into UDOO Quad / Ubuntu 13.10
+Compiled into UDOO Quad / Debian EGLIBC 2.13

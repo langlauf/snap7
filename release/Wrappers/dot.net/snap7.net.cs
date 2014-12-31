@@ -1,7 +1,7 @@
 ﻿/*=============================================================================|
-|  PROJECT SNAP7                                                         1.2.0 |
+|  PROJECT SNAP7                                                         1.3.0 |
 |==============================================================================|
-|  Copyright (C) 2013, 2014 Davide Nardella                                    |
+|  Copyright (C) 2013, 2014, 2015 Davide Nardella                              |
 |  All rights reserved.                                                        |
 |==============================================================================|
 |  SNAP7 is free software: you can redistribute it and/or modify               |
@@ -37,9 +37,9 @@ namespace Snap7
     public class S7Consts
     {
         #if __MonoCS__  // Assuming that we are using Unix release of Mono (otherwise modify it)
-        public const string Snap7LibName = "libsnap7.so";
+            public const string Snap7LibName = "libsnap7.so";
         #else
-        public const string Snap7LibName = "snap7.dll";
+            public const string Snap7LibName = "snap7.dll";
         #endif
         //------------------------------------------------------------------------------
         //                                  PARAMS LIST            
@@ -60,7 +60,195 @@ namespace Snap7
         public static readonly Int32 p_u32_RecoveryTime  = 14;
         public static readonly Int32 p_u32_KeepAliveTime = 15;
     }
-    
+
+    public static class S7
+    {
+        #region [Help Functions]
+        
+        private static int BCDtoByte(byte B)
+        {
+             return ((B >> 4) * 10) + (B & 0x0F);        
+        }
+
+        private static byte ByteToBCD(int Value)
+        {
+            return (byte)(((Value / 10) << 4) | (Value % 10));
+        }
+        
+        // Returns the bit at Pos.Bit 
+        public static bool GetBitAt(byte[] Buffer, int Pos, int Bit)
+        {           
+            byte[] Mask = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
+            if (Bit < 0) Bit = 0;
+            if (Bit > 7) Bit = 7;
+            return (Buffer[Pos] & Mask[Bit]) != 0;
+        }
+        
+        // Returns a 16 bit signed value (S7 int) -32768..32767
+        public static Int16 GetIntAt(byte[] Buffer, int Pos)
+        {
+            return (Int16)((Buffer[Pos] << 8) | Buffer[Pos + 1]);
+        }
+
+        // Returns a 32 bit signed value (S7 dint) -2147483648..2147483647
+        public static Int32 GetDIntAt(byte[] Buffer, int Pos)
+        {
+            Int32 Result;
+            Result = Buffer[Pos]; Result <<= 8;
+            Result += Buffer[Pos + 1]; Result <<= 8;
+            Result += Buffer[Pos + 2]; Result <<= 8;
+            Result += Buffer[Pos + 3];
+            return Result;
+        }
+
+        // Returns a 16 bit unsigned value (S7 word) 0x0000..0xFFFF
+        public static UInt16 GetWordAt(byte[] Buffer, int Pos)
+        {
+            return (UInt16)((Buffer[Pos] << 8) | Buffer[Pos + 1]);
+        }
+
+        // Returns a 32 bit unsigned value (S7 dword) 0x00000000..0xFFFFFFFF
+        public static UInt32 GetDWordAt(byte[] Buffer, int Pos)
+        {
+            return (UInt32)GetDIntAt(Buffer, Pos);
+        }
+
+        public static Single GetRealAt(byte[] Buffer, int Pos)
+        {
+            Int32 Value = GetDIntAt(Buffer, Pos);
+            byte[] bytes = BitConverter.GetBytes(Value);
+            return BitConverter.ToSingle(bytes, 0);
+        }
+
+        public static DateTime GetDateTimeAt(byte[] Buffer, int Pos)
+        {
+            int Year, Month, Day, Hour, Min, Sec;
+
+            Year = BCDtoByte(Buffer[Pos]);
+            if (Year < 90)
+                Year += 2000;
+            else
+                Year += 1900;
+
+            Month = BCDtoByte(Buffer[Pos + 1]) - 1;
+            Day = BCDtoByte(Buffer[Pos + 2]);
+            Hour = BCDtoByte(Buffer[Pos + 3]);
+            Min = BCDtoByte(Buffer[Pos + 4]);
+            Sec = BCDtoByte(Buffer[Pos + 5]);
+
+            try
+            {
+                return new DateTime(Year, Month, Day, Hour, Min, Sec);
+            }
+            catch (System.ArgumentOutOfRangeException)
+            {
+                return new DateTime(0);
+            }
+
+        }
+        
+        // Thanks to Pablo Agirre for GetStringAt
+        public static string GetStringAt(byte[] Buffer, int Pos)
+        {
+            int size = (int)Buffer[Pos + 1];
+            return Encoding.ASCII.GetString(Buffer, Pos + 2, size);
+        }
+
+        // Same as GetString but gets an Array of char (not S7String)
+        public static string GetCharsAt(byte[] Buffer, int Pos, int Size)
+        {
+            return Encoding.ASCII.GetString(Buffer, Pos , Size);
+        }
+
+        public static void SetBitAt(ref byte[] Buffer, int Pos, int Bit, bool Value)
+        {
+            byte[] Mask = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
+            if (Bit < 0) Bit = 0;
+            if (Bit > 7) Bit = 7;
+
+            if (Value)
+                Buffer[Pos] = (byte)(Buffer[Pos] | Mask[Bit]);
+            else
+                Buffer[Pos] = (byte)(Buffer[Pos] & ~Mask[Bit]);
+        }
+
+        public static void SetIntAt(byte[] Buffer, int Pos, Int16 Value)
+        {
+            Buffer[Pos] = (byte)(Value >> 8);
+            Buffer[Pos + 1] = (byte)(Value & 0x00FF);
+        }
+
+        public static void SetDIntAt(byte[] Buffer, int Pos, Int32 Value)
+        {
+            SetDWordAt(Buffer, Pos, (UInt32)Value);
+        }
+
+        public static void SetWordAt(byte[] Buffer, int Pos, UInt16 Value)
+        {
+            Buffer[Pos] = (byte)(Value >> 8);
+            Buffer[Pos + 1] = (byte)(Value & 0x00FF);
+        }
+
+        public static void SetDWordAt(byte[] Buffer, int Pos, UInt32 Value)
+        {
+            Buffer[Pos + 3] = (byte)(Value & 0xFF);
+            Buffer[Pos + 2] = (byte)((Value >> 8) & 0xFF);
+            Buffer[Pos + 1] = (byte)((Value >> 16) & 0xFF);
+            Buffer[Pos] = (byte)((Value >> 24) & 0xFF);
+        }
+
+        public static void SetRealAt(byte[] Buffer, int Pos, Single Value)
+        {
+            byte[] FloatArray = BitConverter.GetBytes(Value);
+            Buffer[Pos] = FloatArray[3];
+            Buffer[Pos + 1] = FloatArray[2];
+            Buffer[Pos + 2] = FloatArray[1];
+            Buffer[Pos + 3] = FloatArray[0];
+        }
+
+        public static void SetDateTimeAt(byte[] Buffer, int Pos, DateTime Value)
+        {
+            int Year = Value.Year;
+            int Month = Value.Month;
+            int Day = Value.Day;
+            int Hour = Value.Hour;
+            int Min = Value.Minute;
+            int Sec = Value.Second;
+            int Dow = (int) Value.DayOfWeek + 1;
+
+            if (Year > 1999)
+                Year -= 2000;
+
+            Buffer[Pos] = ByteToBCD(Year);
+            Buffer[Pos + 1] = ByteToBCD(Month);
+            Buffer[Pos + 2] = ByteToBCD(Day);
+            Buffer[Pos + 3] = ByteToBCD(Hour);
+            Buffer[Pos + 4] = ByteToBCD(Min);
+            Buffer[Pos + 5] = ByteToBCD(Sec);
+            Buffer[Pos + 6] = 0;
+            Buffer[Pos + 7] = ByteToBCD(Dow);        
+        }
+
+        // Thanks to Pablo Agirre for SetStringAt
+        public static void SetStringAt(byte[] Buffer, int Pos, int MaxLen, string Value)
+        {
+            int size = Value.Length;
+            Buffer[Pos] = (byte)MaxLen;
+            Buffer[Pos + 1] = (byte)size;
+            Encoding.ASCII.GetBytes(Value, 0, size, Buffer, Pos + 2);
+        }
+        
+        // Same as SetStringAt but works with an array of char
+        public static void SetCharsAt(byte[] Buffer, int Pos, string Value)
+        {          
+            int MaxLen = Buffer.Length - Pos;
+            // Truncs the string if there's no room enough        
+            if (MaxLen > Value.Length) MaxLen = Value.Length; 
+            Encoding.ASCII.GetBytes(Value, 0, MaxLen, Buffer, Pos);
+        }
+        #endregion
+    }
+
     public class S7Client
     {
         #region [Constants, private vars and TypeDefs]
@@ -162,7 +350,7 @@ namespace Snap7
 
         private IntPtr Client;
 
-        // Data Item 
+        // New Data Item, Thanks to LanceL
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct S7DataItem
         {
@@ -173,6 +361,28 @@ namespace Snap7
             public Int32 Start;
             public Int32 Amount;
             public IntPtr pData;
+
+            public void Set<T>(Int32 Area, Int32 WordLen, Int32 DBNumber, Int32 Start, Int32 Amount, ref T[] Buffer)
+            {
+                Set(Area, WordLen, DBNumber, Start, Amount, ref Buffer, 0);
+            }
+
+            public void Set<T>(Int32 Area, Int32 WordLen, Int32 DBNumber, Int32 Start, Int32 Amount, ref T[] Buffer, Int32 Offset)
+            {
+                this.Area = Area;
+                this.WordLen = WordLen;
+                this.Result = 0;
+                this.DBNumber = DBNumber;
+                this.Start = Start;
+                this.Amount = Amount;
+                GCHandle handle = GCHandle.Alloc(Buffer, GCHandleType.Pinned);
+                // this.pData = handle.AddrOfPinnedObject() + Offset * Marshal.SizeOf(typeof(T));
+                if (IntPtr.Size == 4)
+                    this.pData = (IntPtr)(handle.AddrOfPinnedObject().ToInt32() + Offset * Marshal.SizeOf(typeof(T)));
+                else
+                    this.pData = (IntPtr)(handle.AddrOfPinnedObject().ToInt64() + Offset * Marshal.SizeOf(typeof(T)));
+                handle.Free();
+            }
         }
 
         // Block List
@@ -530,17 +740,17 @@ namespace Snap7
         }
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Cli_ReadMultiVars(IntPtr Client, ref S7DataItem Item, int ItemsCount);
-        public int ReadMultiVars(ref S7DataItem Item, int ItemsCount)
+        protected static extern int Cli_ReadMultiVars(IntPtr Client, S7DataItem[] Items, int ItemsCount);
+        public int ReadMultiVars(S7DataItem[] Items, int ItemsCount)
         {
-            return Cli_ReadMultiVars(Client, ref Item, ItemsCount);
+            return Cli_ReadMultiVars(Client, Items, ItemsCount);
         }
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Cli_WriteMultiVars(IntPtr Client, ref S7DataItem Item, int ItemsCount);
-        public int WriteMultiVars(ref S7DataItem Item, int ItemsCount)
+        protected static extern int Cli_WriteMultiVars(IntPtr Client, S7DataItem[] Items, int ItemsCount);
+        public int WriteMultiVars(S7DataItem[] Items, int ItemsCount)
         {
-            return Cli_WriteMultiVars(Client, ref Item, ItemsCount);
+            return Cli_WriteMultiVars(Client, Items, ItemsCount);
         }
 
         #endregion
@@ -644,7 +854,7 @@ namespace Snap7
 
         [DllImport(S7Consts.Snap7LibName)]
         protected static extern int Cli_GetAgBlockInfo(IntPtr Client, int BlockType, int BlockNum, ref US7BlockInfo Info);
-        public int GetAgBlockInfo(IntPtr Client, int BlockType, int BlockNum, ref S7BlockInfo Info)
+        public int GetAgBlockInfo(int BlockType, int BlockNum, ref S7BlockInfo Info)
         {
             int res = Cli_GetAgBlockInfo(Client, BlockType, BlockNum, ref UBlockInfo);
             // Packed->Managed
@@ -830,11 +1040,11 @@ namespace Snap7
         }
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Cli_GetCPInfo(IntPtr Client, ref S7CpInfo Info);
+        protected static extern int Cli_GetCpInfo(IntPtr Client, ref S7CpInfo Info);
 
         public int GetCpInfo(ref S7CpInfo Info)
         {
-            return Cli_GetCPInfo(Client, ref Info);
+            return Cli_GetCpInfo(Client, ref Info);
         }
 
         [DllImport(S7Consts.Snap7LibName)]
@@ -877,17 +1087,17 @@ namespace Snap7
         }
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Cli_PlcCopyRamToRom(IntPtr Client, UInt32 Timeout);
+        protected static extern int Cli_CopyRamToRom(IntPtr Client, UInt32 Timeout);
         public int PlcCopyRamToRom(UInt32 Timeout)
         {
-            return Cli_PlcCopyRamToRom(Client, Timeout);
+            return Cli_CopyRamToRom(Client, Timeout);
         }
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Cli_PlcCompress(IntPtr Client, UInt32 Timeout);
+        protected static extern int Cli_Compress(IntPtr Client, UInt32 Timeout);
         public int PlcCompress(UInt32 Timeout)
         {
-            return Cli_PlcCompress(Client, Timeout);
+            return Cli_Compress(Client, Timeout);
         }
 
         [DllImport(S7Consts.Snap7LibName)]
@@ -1585,7 +1795,7 @@ namespace Snap7
         #region [Info functions]
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Srv_GetStatus(IntPtr Server, ref Int32 CpuStatus, ref Int32 ServerStatus, ref Int32 ClientsCount);
+        protected static extern int Srv_GetStatus(IntPtr Server, ref Int32 ServerStatus, ref Int32 CpuStatus, ref Int32 ClientsCount);
         [DllImport(S7Consts.Snap7LibName)]
         protected static extern int Srv_SetCpuStatus(IntPtr Server, Int32 CpuStatus);       
         
@@ -1598,7 +1808,7 @@ namespace Snap7
                 Int32 SStatus = new Int32();
                 Int32 CCount  = new Int32();
 
-                if (Srv_GetStatus(Server, ref CStatus, ref SStatus, ref CCount) == 0)
+                if (Srv_GetStatus(Server, ref SStatus, ref CStatus, ref CCount) == 0)
                     return CStatus;
                 else
                     return -1;
@@ -1617,7 +1827,7 @@ namespace Snap7
                 Int32 CStatus = new Int32();
                 Int32 SStatus = new Int32();
                 Int32 CCount = new Int32();
-                if (Srv_GetStatus(Server, ref CStatus, ref SStatus, ref CCount) == 0)
+                if (Srv_GetStatus(Server, ref SStatus, ref CStatus, ref CCount) == 0)
                     return SStatus;
                 else
                     return -1;
@@ -1892,10 +2102,10 @@ namespace Snap7
         #region [Data I/O functions : BRecv]
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Par_BRecv(IntPtr Partner, UInt32 Timeout, ref UInt32 R_ID, byte[] Buffer, ref Int32 Size);
-        public int BRecv(UInt32 Timeout, ref UInt32 R_ID, byte[] Buffer, ref Int32 Size)
+        protected static extern int Par_BRecv(IntPtr Partner, ref UInt32 R_ID, byte[] Buffer, ref Int32 Size, UInt32 Timeout);
+        public int BRecv(ref UInt32 R_ID, byte[] Buffer, ref Int32 Size, UInt32 Timeout)
         {
-            return Par_BRecv(Partner, Timeout, ref R_ID, Buffer, ref Size);
+            return Par_BRecv(Partner, ref R_ID, Buffer, ref Size, Timeout);
         }
 
         [DllImport(S7Consts.Snap7LibName)]

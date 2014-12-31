@@ -1,5 +1,5 @@
 (*=============================================================================|
-|  PROJECT SNAP7                                                         1.2.0 |
+|  PROJECT SNAP7                                                         1.3.0 |
 |==============================================================================|
 |  Copyright (C) 2013, 2014 Davide Nardella                                    |
 |  All rights reserved.                                                        |
@@ -176,9 +176,17 @@ Const
 // Word Length
   S7WLBit     = $01;
   S7WLByte    = $02;
+  S7WLChar    = $03;
   S7WLWord    = $04;
+  S7WLInt     = $05;
   S7WLDWord   = $06;
+  S7WLDInt    = $07;
   S7WLReal    = $08;
+  S7WLDate    = $09;
+  S7WLTOD     = $0A;
+  S7WLTime    = $0B;
+  S7WLS5Time  = $0C;
+  S7WLDT      = $0F;
   S7WLCounter = $1C;
   S7WLTimer   = $1D;
 // Block type
@@ -993,12 +1001,45 @@ Type
     property SendTime : longword read GetSendTime;
     property RecvTime : longword read GetRecvTime;
   end;
+//******************************************************************************
+//                                S7 CONVERSION CLASS
+//******************************************************************************
+  TS7Type = (S7Int, S7DInt, S7Word, S7DWord, S7Real, S7DT_To_DateTime, DateTime_To_S7DT);
+
+  S7 = class
+  private
+    class function GetInt(pval: pointer): smallint; static;
+    class procedure SetInt(pval: pointer; const Value: smallint); static;
+    class function GetWord(pval: pointer): word; static;
+    class procedure SetWord(pval: pointer; const Value: word); static;
+    class function GetDInt(pval: pointer): smallint; static;
+    class procedure SetDInt(pval: pointer; const Value: smallint);static;
+    class function GetDWord(pval: pointer): longword; static;
+    class procedure SetDWord(pval: pointer; const Value: longword); static;
+    class function GetDateTime(pval: pointer): TDateTime; static;
+    class procedure SetDateTime(pval: pointer; const Value: TDateTime); static;
+    class function GetReal(pval: pointer): single; static;
+    class procedure SetReal(pval: pointer; const Value: single); static;
+    class function GetBit(pval: pointer; BitIndex: integer): boolean; static;
+    class procedure SetBit(pval: pointer; BitIndex: integer; const Value: boolean); static;
+  public
+    class procedure Reverse(pval : pointer; const S7Type : TS7Type); static;
+    class property ValBit[pval : pointer; BitIndex : integer] : boolean read GetBit write SetBit;
+    class property ValInt[pval : pointer] : smallint read GetInt write SetInt;
+    class property ValDInt[pval : pointer] : smallint read GetDInt write SetDInt;
+    class property ValWord[pval : pointer] : word read GetWord write SetWord;
+    class property ValDWord[pval : pointer] : longword read GetDWord write SetDWord;
+    class property ValReal[pval : pointer] : single read GetReal write SetReal;
+    class property ValDateTime[pval : pointer] : TDateTime read GetDateTime write SetDateTime;
+  end;
 
 // Error text
 function CliErrorText(Error : integer) : string;
 function SrvErrorText(Error : integer) : string;
 function ParErrorText(Error : integer) : string;
 function SrvEventText(var Event : TSrvEvent) : string;
+
+// Conversion utils
 
 implementation
 Uses
@@ -1934,6 +1975,226 @@ end;
 function TS7Partner.WaitAsBSendCompletion(Timeout: longword): integer;
 begin
   Result:=Par_WaitAsBSendCompletion(HP, Timeout);
+end;
+//******************************************************************************
+//  S7 CLASS IMPLEMENTATION
+//******************************************************************************
+class function S7.GetBit(pval: pointer; BitIndex: integer): boolean;
+Const
+  Mask : array[0..7] of byte = ($01,$02,$04,$08,$10,$20,$40,$80);
+begin
+  if BitIndex<0 then BitIndex:=0;
+  if BitIndex>7 then BitIndex:=7;
+  Result:=pbyte(pval)^ and Mask[BitIndex] <> 0;
+end;
+//------------------------------------------------------------------------------
+class function S7.GetDateTime(pval: pointer): TDateTime;
+Type
+  S7DT   = packed array[0..7] of byte;
+Var
+  Buffer : ^S7DT;
+  YY,MM,DD,HH,NN,SS,MS : word;
+  C,D,U : integer;
+
+  function BCD(const B: byte): word;
+  begin
+    Result:=(B and $0F) + ((B shr 4) * 10);
+  end;
+
+begin
+  Buffer:=pval;
+
+  YY:= Buffer^[0];
+  if YY>137 then // 137 dec = 89 BCD
+    YY:=1900+BCD(YY)
+  else
+    YY:=2000+BCD(YY);
+
+  MM:=BCD(Buffer^[1]);
+  DD:=BCD(Buffer^[2]);
+  HH:=BCD(Buffer^[3]);
+  NN:=BCD(Buffer^[4]);
+  SS:=BCD(Buffer^[5]);
+
+  // Millisec
+  MS:=Buffer^[6];
+  MS:=(MS shl 8)+Buffer^[7];
+  // Last 4 bit are Day of Week
+  MS:=MS shr 4;
+
+  // Hex to Int
+  C:=((MS and $0F00) shr 8) * 100;
+  D:=((MS and $00F0) shr 4) * 10;
+  U:= (MS and $000F);
+
+  MS:=C+D+U;
+  TryEncodeDateTime(YY,MM,DD,HH,NN,SS,MS,Result);
+end;
+//------------------------------------------------------------------------------
+class function S7.GetDInt(pval: pointer): smallint;
+Var
+  DW : packed array[0..3] of byte absolute Result;
+begin
+  DW[0]:=(pbyte(pval)+3)^;
+  DW[1]:=(pbyte(pval)+2)^;
+  DW[2]:=(pbyte(pval)+1)^;
+  DW[3]:=pbyte(pval)^;
+end;
+//------------------------------------------------------------------------------
+class function S7.GetDWord(pval: pointer): longword;
+Var
+  DW : packed array[0..3] of byte absolute Result;
+begin
+  DW[0]:=(pbyte(pval)+3)^;
+  DW[1]:=(pbyte(pval)+2)^;
+  DW[2]:=(pbyte(pval)+1)^;
+  DW[3]:=pbyte(pval)^;
+end;
+//------------------------------------------------------------------------------
+class function S7.GetInt(pval: pointer): smallint;
+Var
+  BW : packed array[0..1] of byte absolute Result;
+begin
+  BW[0]:=(pbyte(pval)+1)^;
+  BW[1]:=pbyte(pval)^;
+end;
+//------------------------------------------------------------------------------
+class function S7.GetReal(pval: pointer): single;
+Var
+  DW : packed array[0..3] of byte absolute Result;
+begin
+  DW[0]:=(pbyte(pval)+3)^;
+  DW[1]:=(pbyte(pval)+2)^;
+  DW[2]:=(pbyte(pval)+1)^;
+  DW[3]:=pbyte(pval)^;
+end;
+//------------------------------------------------------------------------------
+class function S7.GetWord(pval: pointer): word;
+Var
+  BW : packed array[0..1] of byte absolute Result;
+begin
+  BW[0]:=(pbyte(pval)+1)^;
+  BW[1]:=pbyte(pval)^;
+end;
+//------------------------------------------------------------------------------
+class procedure S7.Reverse(pval: pointer; const S7Type: TS7Type);
+Var
+  DT : TDateTime;
+begin
+  case S7Type of
+    S7Int,
+    S7Word: SetWord(pval, pword(pval)^);
+    S7DInt,
+    S7DWord,
+    S7Real: SetWord(pval, plongword(pval)^);
+    S7DT_To_DateTime: pDateTime(pval)^:=GetDateTime(pval);
+    DateTime_To_S7DT: begin
+      DT:=pdateTime(pval)^;
+      SetDateTime(pval, DT);
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+class procedure S7.SetBit(pval: pointer; BitIndex: integer; const Value: boolean);
+Const
+  Mask : array[0..7] of byte = ($01,$02,$04,$08,$10,$20,$40,$80);
+begin
+  if BitIndex<0 then BitIndex:=0;
+  if BitIndex>7 then BitIndex:=7;
+  if Value then
+    pbyte(pval)^ := pbyte(pval)^ or Mask[BitIndex]
+  else
+    pbyte(pval)^ := pbyte(pval)^ and not Mask[BitIndex];
+end;
+//------------------------------------------------------------------------------
+class procedure S7.SetDateTime(pval: pointer; const Value: TDateTime);
+Type
+  DATE_AND_TIME = packed array[1..8] of byte;
+  pDT = ^DATE_AND_TIME;
+
+  function BCD(Value : word) : byte;
+  begin
+    Result:=((Value div 10) shl 4) OR (Value mod 10);
+  end;
+
+  function BCDW(Value : word) : word;
+  Var
+    AppC, AppD : word;
+  begin
+    AppC :=(Value div 100);
+    Dec(Value,AppC * 100);
+    AppD :=(Value div 10);
+    Dec(Value,AppD * 10);
+    Result:=(AppC shl 8) + (AppD shl 4) + Value;
+  end;
+
+Var
+  DT : pDT;
+  MsDOW, AYear, AMonth, ADay,
+  AHour, AMinute, ASecond, AMilliSecond: Word;
+begin
+  DT:=pval;
+  DecodeDateTime(Value,AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  if AYear>1999 then
+    AYear:=AYear-2000
+  else
+    AYear:=AYear-1900;
+
+  DT^[1]:=BCD(AYear);
+  DT^[2]:=BCD(AMonth);
+  DT^[3]:=BCD(ADay);
+  DT^[4]:=BCD(AHour);
+  DT^[5]:=BCD(AMinute);
+  DT^[6]:=BCD(ASecond);
+  MsDOW:=(BCDW(AMillisecond) shl 4) + DayOfWeek(Value)+1;
+  DT^[7]:=HI(MsDOW);
+  DT^[8]:=LO(MsDOW);
+end;
+//------------------------------------------------------------------------------
+class procedure S7.SetDInt(pval: pointer; const Value: smallint);
+Var
+  DW : packed array[0..3] of byte absolute value;
+begin
+  pbyte(pval)^:=DW[3];
+  (pbyte(pval)+1)^:=DW[2];
+  (pbyte(pval)+2)^:=DW[1];
+  (pbyte(pval)+3)^:=DW[0];
+end;
+//------------------------------------------------------------------------------
+class procedure S7.SetDWord(pval: pointer; const Value: longword);
+Var
+  DW : packed array[0..3] of byte absolute value;
+begin
+  pbyte(pval)^:=DW[3];
+  (pbyte(pval)+1)^:=DW[2];
+  (pbyte(pval)+2)^:=DW[1];
+  (pbyte(pval)+3)^:=DW[0];
+end;
+//------------------------------------------------------------------------------
+class procedure S7.SetInt(pval: pointer; const Value: smallint);
+Var
+  BW : packed array[0..1] of byte absolute value;
+begin
+  (pbyte(pval)+1)^:=BW[0];
+  pbyte(pval)^:=BW[1];
+end;
+//------------------------------------------------------------------------------
+class procedure S7.SetReal(pval: pointer; const Value: single);
+Var
+  DW : packed array[0..3] of byte absolute value;
+begin
+  pbyte(pval)^:=DW[3];
+  (pbyte(pval)+1)^:=DW[2];
+  (pbyte(pval)+2)^:=DW[1];
+  (pbyte(pval)+3)^:=DW[0];
+end;
+//------------------------------------------------------------------------------
+class procedure S7.SetWord(pval: pointer; const Value: word);
+Var
+  BW : packed array[0..1] of byte absolute value;
+begin
+  (pbyte(pval)+1)^:=BW[0];
+  pbyte(pval)^:=BW[1];
 end;
 //******************************************************************************
 //                               TEXT ROUTINES

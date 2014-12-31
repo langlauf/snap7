@@ -1,0 +1,5 @@
+C:\BuildSnap7Assembly\Snap7\bin\Debug\Snap7.net.dll
+C:\BuildSnap7Assembly\Snap7\bin\Debug\Snap7.net.pdb
+C:\BuildSnap7Assembly\Snap7\obj\Debug\ResolveAssemblyReference.cache
+C:\BuildSnap7Assembly\Snap7\obj\Debug\Snap7.net.dll
+C:\BuildSnap7Assembly\Snap7\obj\Debug\Snap7.net.pdb

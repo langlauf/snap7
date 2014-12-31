@@ -7,7 +7,7 @@ You can find it in "Microsoft Visual Studio XXX -> Visual studio tool.
 
 In Unix (whatever flavour) run .\mono.sh
 
-Optionally you can add the switch /platform:<string> in the bach file.
+Optionally you can add the switch /platform:<string> in the batch file.
 
 Notes from MSDN:
 
