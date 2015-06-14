@@ -19,11 +19,11 @@ object FormClient: TFormClient
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poScreenCenter
-  LCLVersion = '1.2.6.0'
+  LCLVersion = '1.4.0.4'
   Visible = True
   object Label1: TLabel
     Left = 11
-    Height = 14
+    Height = 13
     Top = 9
     Width = 10
     Caption = 'IP'
@@ -31,15 +31,15 @@ object FormClient: TFormClient
   end
   object Label7: TLabel
     Left = 456
-    Height = 14
+    Height = 13
     Top = 9
-    Width = 87
+    Width = 75
     Caption = 'PDU Size (byte)'
     ParentColor = False
   end
   object EdIp: TEdit
     Left = 8
-    Height = 24
+    Height = 21
     Top = 24
     Width = 98
     TabOrder = 0
@@ -77,10 +77,10 @@ object FormClient: TFormClient
   end
   object PageControl: TPageControl
     Left = 0
-    Height = 533
+    Height = 531
     Top = 110
     Width = 753
-    ActivePage = TabSheet1
+    ActivePage = TabSheet3
     Align = alBottom
     Anchors = [akTop, akBottom]
     Font.Color = clWindowText
@@ -88,7 +88,7 @@ object FormClient: TFormClient
     Font.Name = 'Sans'
     MultiLine = True
     ParentFont = False
-    TabIndex = 1
+    TabIndex = 2
     TabOrder = 4
     OnChange = PageControlChange
     Options = [nboMultiLine]
@@ -103,7 +103,7 @@ object FormClient: TFormClient
         Top = 295
         Width = 491
         Caption = 'Communication Info'
-        ClientHeight = 152
+        ClientHeight = 149
         ClientWidth = 487
         TabOrder = 2
         object Label44: TLabel
@@ -201,7 +201,7 @@ object FormClient: TFormClient
         Top = 87
         Width = 492
         Caption = 'Unit Info'
-        ClientHeight = 184
+        ClientHeight = 181
         ClientWidth = 488
         TabOrder = 1
         object Label41: TLabel
@@ -321,7 +321,7 @@ object FormClient: TFormClient
         Top = 11
         Width = 492
         Caption = 'Catalog'
-        ClientHeight = 49
+        ClientHeight = 46
         ClientWidth = 488
         TabOrder = 0
         object Label40: TLabel
@@ -385,13 +385,13 @@ object FormClient: TFormClient
     end
     object TabSheet1: TTabSheet
       Caption = 'Data read/write'
-      ClientHeight = 501
-      ClientWidth = 747
+      ClientHeight = 504
+      ClientWidth = 745
       object Label4: TLabel
         Left = 616
         Height = 14
         Top = 8
-        Width = 27
+        Width = 24
         Caption = 'Area'
         ParentColor = False
       end
@@ -399,7 +399,7 @@ object FormClient: TFormClient
         Left = 616
         Height = 14
         Top = 48
-        Width = 65
+        Width = 54
         Caption = 'DB Number'
         ParentColor = False
       end
@@ -407,7 +407,7 @@ object FormClient: TFormClient
         Left = 616
         Height = 14
         Top = 88
-        Width = 27
+        Width = 23
         Caption = 'Start'
         ParentColor = False
       end
@@ -415,7 +415,7 @@ object FormClient: TFormClient
         Left = 616
         Height = 14
         Top = 128
-        Width = 44
+        Width = 37
         Caption = 'Amount'
         ParentColor = False
       end
@@ -423,15 +423,15 @@ object FormClient: TFormClient
         Left = 616
         Height = 14
         Top = 174
-        Width = 49
+        Width = 44
         Caption = 'WordLen'
         ParentColor = False
       end
       object LblArea: TLabel
         Left = 616
-        Height = 28
+        Height = 26
         Top = 226
-        Width = 118
+        Width = 107
         Alignment = taCenter
         Caption = 'Area and WordLen '#13#10'mismatch'
         Font.Color = clRed
@@ -444,7 +444,7 @@ object FormClient: TFormClient
       end
       object DataGrid: TStringGrid
         Left = 0
-        Height = 501
+        Height = 504
         Top = 0
         Width = 601
         Align = alLeft
@@ -470,10 +470,10 @@ object FormClient: TFormClient
       end
       object CbArea: TComboBox
         Left = 616
-        Height = 27
+        Height = 22
         Top = 24
         Width = 105
-        ItemHeight = 0
+        ItemHeight = 14
         ItemIndex = 0
         Items.Strings = (
           'DB'
@@ -490,7 +490,7 @@ object FormClient: TFormClient
       end
       object EdDBNum: TEdit
         Left = 616
-        Height = 24
+        Height = 22
         Top = 64
         Width = 105
         OnKeyPress = EdRackKeyPress
@@ -499,7 +499,7 @@ object FormClient: TFormClient
       end
       object EdStart: TEdit
         Left = 616
-        Height = 24
+        Height = 22
         Top = 104
         Width = 105
         OnKeyPress = EdRackKeyPress
@@ -508,7 +508,7 @@ object FormClient: TFormClient
       end
       object EdAmount: TEdit
         Left = 616
-        Height = 24
+        Height = 22
         Top = 144
         Width = 105
         OnKeyPress = EdRackKeyPress
@@ -555,10 +555,10 @@ object FormClient: TFormClient
       end
       object CbWLen: TComboBox
         Left = 616
-        Height = 27
+        Height = 22
         Top = 190
         Width = 105
-        ItemHeight = 0
+        ItemHeight = 14
         ItemIndex = 1
         Items.Strings = (
           'S7WLBit'
@@ -585,46 +585,46 @@ object FormClient: TFormClient
     end
     object TabSheet3: TTabSheet
       Caption = 'Multi read/write'
-      ClientHeight = 501
-      ClientWidth = 747
+      ClientHeight = 504
+      ClientWidth = 745
       ImageIndex = 2
       object Label9: TLabel
         Left = 32
-        Height = 15
+        Height = 14
         Top = 24
-        Width = 25
+        Width = 24
         Caption = 'Area'
         ParentColor = False
       end
       object Label10: TLabel
         Left = 140
-        Height = 15
+        Height = 14
         Top = 24
-        Width = 55
+        Width = 54
         Caption = 'DB Number'
         ParentColor = False
       end
       object Label11: TLabel
         Left = 218
-        Height = 15
+        Height = 14
         Top = 24
-        Width = 24
+        Width = 23
         Caption = 'Start'
         ParentColor = False
       end
       object Label12: TLabel
         Left = 277
-        Height = 15
+        Height = 14
         Top = 24
-        Width = 22
+        Width = 21
         Caption = 'Size'
         ParentColor = False
       end
       object Label13: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 41
-        Width = 9
+        Width = 8
         Caption = '1'
         Font.Color = clWindowText
         Font.Height = -13
@@ -635,9 +635,9 @@ object FormClient: TFormClient
       end
       object Label14: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 65
-        Width = 9
+        Width = 8
         Caption = '2'
         Font.Color = clWindowText
         Font.Height = -13
@@ -648,9 +648,9 @@ object FormClient: TFormClient
       end
       object Label15: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 89
-        Width = 9
+        Width = 8
         Caption = '3'
         Font.Color = clWindowText
         Font.Height = -13
@@ -661,9 +661,9 @@ object FormClient: TFormClient
       end
       object Label16: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 113
-        Width = 9
+        Width = 8
         Caption = '4'
         Font.Color = clWindowText
         Font.Height = -13
@@ -674,9 +674,9 @@ object FormClient: TFormClient
       end
       object Label17: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 137
-        Width = 9
+        Width = 8
         Caption = '5'
         Font.Color = clWindowText
         Font.Height = -13
@@ -687,17 +687,17 @@ object FormClient: TFormClient
       end
       object Label18: TLabel
         Left = 325
-        Height = 15
+        Height = 14
         Top = 24
-        Width = 48
+        Width = 47
         Caption = 'Data read'
         ParentColor = False
       end
       object Label20: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 201
-        Width = 9
+        Width = 8
         Caption = '1'
         Font.Color = clWindowText
         Font.Height = -13
@@ -708,9 +708,9 @@ object FormClient: TFormClient
       end
       object Label21: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 225
-        Width = 9
+        Width = 8
         Caption = '2'
         Font.Color = clWindowText
         Font.Height = -13
@@ -721,9 +721,9 @@ object FormClient: TFormClient
       end
       object Label22: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 249
-        Width = 9
+        Width = 8
         Caption = '3'
         Font.Color = clWindowText
         Font.Height = -13
@@ -734,9 +734,9 @@ object FormClient: TFormClient
       end
       object Label23: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 273
-        Width = 9
+        Width = 8
         Caption = '4'
         Font.Color = clWindowText
         Font.Height = -13
@@ -747,9 +747,9 @@ object FormClient: TFormClient
       end
       object Label24: TLabel
         Left = 12
-        Height = 17
+        Height = 16
         Top = 297
-        Width = 9
+        Width = 8
         Caption = '5'
         Font.Color = clWindowText
         Font.Height = -13
@@ -760,25 +760,25 @@ object FormClient: TFormClient
       end
       object Label25: TLabel
         Left = 32
-        Height = 15
+        Height = 14
         Top = 179
-        Width = 31
+        Width = 30
         Caption = 'Result'
         ParentColor = False
       end
       object Label53: TLabel
         Left = 325
-        Height = 15
+        Height = 14
         Top = 179
-        Width = 97
+        Width = 96
         Caption = 'Data write (fill char)'
         ParentColor = False
       end
       object Label55: TLabel
         Left = 45
-        Height = 57
+        Height = 56
         Top = 349
-        Width = 569
+        Width = 568
         Alignment = taCenter
         Caption = 'These function can read/write multiple vars in the same call. The limitation is that the total size cannot exceed the '#10'PDU size negotiated. The big advantage is that every var is indipendent from each other (you can mix DB, Merkers ...).'#10'Up to 20 vars can be defined, in this demo, for simplicity we use only 5 items.'#10'There is no Async support for these functions since they are executed in a single telegram exchange.'
         ParentColor = False
@@ -786,17 +786,17 @@ object FormClient: TFormClient
       end
       object Label38: TLabel
         Left = 486
-        Height = 15
+        Height = 14
         Top = 179
-        Width = 70
+        Width = 69
         Caption = 'ReadMultiVars'
         ParentColor = False
       end
       object Label39: TLabel
         Left = 486
-        Height = 15
+        Height = 14
         Top = 263
-        Width = 70
+        Width = 69
         Caption = 'WriteMultiVars'
         ParentColor = False
       end
@@ -805,7 +805,7 @@ object FormClient: TFormClient
         Height = 22
         Top = 40
         Width = 105
-        ItemHeight = 0
+        ItemHeight = 14
         ItemIndex = 0
         Items.Strings = (
           'DB'
@@ -851,7 +851,7 @@ object FormClient: TFormClient
         Left = 323
         Height = 22
         Top = 40
-        Width = 407
+        Width = 405
         Anchors = [akTop, akLeft, akRight]
         TabOrder = 4
       end
@@ -860,7 +860,7 @@ object FormClient: TFormClient
         Height = 22
         Top = 64
         Width = 105
-        ItemHeight = 0
+        ItemHeight = 14
         ItemIndex = 0
         Items.Strings = (
           'DB'
@@ -906,7 +906,7 @@ object FormClient: TFormClient
         Left = 323
         Height = 22
         Top = 64
-        Width = 407
+        Width = 405
         Anchors = [akTop, akLeft, akRight]
         TabOrder = 9
       end
@@ -915,7 +915,7 @@ object FormClient: TFormClient
         Height = 22
         Top = 88
         Width = 105
-        ItemHeight = 0
+        ItemHeight = 14
         ItemIndex = 0
         Items.Strings = (
           'DB'
@@ -961,7 +961,7 @@ object FormClient: TFormClient
         Left = 323
         Height = 22
         Top = 88
-        Width = 407
+        Width = 405
         Anchors = [akTop, akLeft, akRight]
         TabOrder = 14
       end
@@ -970,7 +970,7 @@ object FormClient: TFormClient
         Height = 22
         Top = 112
         Width = 105
-        ItemHeight = 0
+        ItemHeight = 14
         ItemIndex = 0
         Items.Strings = (
           'DB'
@@ -1016,7 +1016,7 @@ object FormClient: TFormClient
         Left = 323
         Height = 22
         Top = 112
-        Width = 407
+        Width = 405
         Anchors = [akTop, akLeft, akRight]
         TabOrder = 19
       end
@@ -1025,7 +1025,7 @@ object FormClient: TFormClient
         Height = 22
         Top = 136
         Width = 105
-        ItemHeight = 0
+        ItemHeight = 14
         ItemIndex = 0
         Items.Strings = (
           'DB'
@@ -1071,12 +1071,12 @@ object FormClient: TFormClient
         Left = 323
         Height = 22
         Top = 136
-        Width = 407
+        Width = 405
         Anchors = [akTop, akLeft, akRight]
         TabOrder = 24
       end
       object MultiReadBtn: TButton
-        Left = 474
+        Left = 472
         Height = 25
         Top = 195
         Width = 105
@@ -1086,7 +1086,7 @@ object FormClient: TFormClient
         TabOrder = 30
       end
       object MultiWriteBtn: TButton
-        Left = 474
+        Left = 472
         Height = 25
         Top = 280
         Width = 104
@@ -1099,7 +1099,7 @@ object FormClient: TFormClient
         Left = 32
         Height = 22
         Top = 200
-        Width = 250
+        Width = 248
         Anchors = [akTop, akLeft, akRight]
         ReadOnly = True
         TabOrder = 25
@@ -1108,7 +1108,7 @@ object FormClient: TFormClient
         Left = 32
         Height = 22
         Top = 224
-        Width = 250
+        Width = 248
         Anchors = [akTop, akLeft, akRight]
         ReadOnly = True
         TabOrder = 26
@@ -1117,7 +1117,7 @@ object FormClient: TFormClient
         Left = 32
         Height = 22
         Top = 248
-        Width = 250
+        Width = 248
         Anchors = [akTop, akLeft, akRight]
         ReadOnly = True
         TabOrder = 27
@@ -1126,7 +1126,7 @@ object FormClient: TFormClient
         Left = 32
         Height = 22
         Top = 272
-        Width = 250
+        Width = 248
         Anchors = [akTop, akLeft, akRight]
         ReadOnly = True
         TabOrder = 28
@@ -1135,7 +1135,7 @@ object FormClient: TFormClient
         Left = 32
         Height = 22
         Top = 296
-        Width = 250
+        Width = 248
         Anchors = [akTop, akLeft, akRight]
         ReadOnly = True
         TabOrder = 29
@@ -1192,7 +1192,7 @@ object FormClient: TFormClient
         Top = 9
         Width = 131
         Caption = 'Blocks List'
-        ClientHeight = 292
+        ClientHeight = 289
         ClientWidth = 127
         TabOrder = 0
         object Label26: TLabel
@@ -1388,7 +1388,7 @@ object FormClient: TFormClient
         Top = 9
         Width = 270
         Caption = 'Block Info'
-        ClientHeight = 324
+        ClientHeight = 321
         ClientWidth = 266
         TabOrder = 2
         object cbBlock: TComboBox
@@ -1396,7 +1396,7 @@ object FormClient: TFormClient
           Height = 22
           Top = 5
           Width = 65
-          ItemHeight = 0
+          ItemHeight = 14
           ItemIndex = 0
           Items.Strings = (
             'OB'
@@ -1449,7 +1449,7 @@ object FormClient: TFormClient
         Top = 9
         Width = 158
         Caption = 'List Blocks of Type'
-        ClientHeight = 468
+        ClientHeight = 465
         ClientWidth = 154
         TabOrder = 1
         object LblDblClick: TLabel
@@ -1471,7 +1471,7 @@ object FormClient: TFormClient
           Height = 22
           Top = 5
           Width = 65
-          ItemHeight = 0
+          ItemHeight = 14
           ItemIndex = 0
           Items.Strings = (
             'OB'
@@ -1510,7 +1510,6 @@ object FormClient: TFormClient
           ParentFont = False
           ScrollWidth = 119
           TabOrder = 1
-          TopIndex = -1
         end
         object AsBotBtn: TButton
           Left = 13
@@ -1573,7 +1572,7 @@ object FormClient: TFormClient
         Height = 22
         Top = 29
         Width = 65
-        ItemHeight = 0
+        ItemHeight = 14
         ItemIndex = 0
         Items.Strings = (
           'OB'
@@ -1778,7 +1777,7 @@ object FormClient: TFormClient
         Top = 78
         Width = 181
         Caption = 'DB Fill'
-        ClientHeight = 159
+        ClientHeight = 156
         ClientWidth = 177
         TabOrder = 4
         object Label56: TLabel
@@ -1957,7 +1956,6 @@ object FormClient: TFormClient
         ParentFont = False
         ScrollWidth = 119
         TabOrder = 1
-        TopIndex = -1
       end
       object Button12: TButton
         Left = 48
@@ -1980,7 +1978,7 @@ object FormClient: TFormClient
         Top = 16
         Width = 305
         Caption = 'PG/PC Date and time'
-        ClientHeight = 49
+        ClientHeight = 46
         ClientWidth = 301
         TabOrder = 0
         object edPGDate: TEdit
@@ -2017,7 +2015,7 @@ object FormClient: TFormClient
         Top = 96
         Width = 305
         Caption = 'CPU Date and Time'
-        ClientHeight = 49
+        ClientHeight = 46
         ClientWidth = 301
         Enabled = False
         TabOrder = 1
@@ -2057,7 +2055,7 @@ object FormClient: TFormClient
         Top = 9
         Width = 681
         Caption = 'Unit status'
-        ClientHeight = 120
+        ClientHeight = 117
         ClientWidth = 677
         TabOrder = 0
         object lblStatus: TLabel
@@ -2129,7 +2127,7 @@ object FormClient: TFormClient
         Top = 171
         Width = 681
         Caption = 'Misc'
-        ClientHeight = 158
+        ClientHeight = 155
         ClientWidth = 677
         TabOrder = 1
         object Label8: TLabel
@@ -2226,7 +2224,7 @@ object FormClient: TFormClient
         Top = 358
         Width = 582
         Caption = 'Session Login/Logout'
-        ClientHeight = 99
+        ClientHeight = 96
         ClientWidth = 578
         TabOrder = 3
         object EdPassword: TEdit
@@ -2282,7 +2280,7 @@ object FormClient: TFormClient
           ChildSizing.ShrinkVertical = crsScaleChilds
           ChildSizing.Layout = cclLeftToRightThenTopToBottom
           ChildSizing.ControlsPerLine = 1
-          ClientHeight = 92
+          ClientHeight = 89
           ClientWidth = 181
           Items.Strings = (
             'Unknown'
@@ -2306,7 +2304,7 @@ object FormClient: TFormClient
           ChildSizing.ShrinkVertical = crsScaleChilds
           ChildSizing.Layout = cclLeftToRightThenTopToBottom
           ChildSizing.ControlsPerLine = 1
-          ClientHeight = 92
+          ClientHeight = 89
           ClientWidth = 181
           Items.Strings = (
             'No Password'
@@ -2331,7 +2329,7 @@ object FormClient: TFormClient
           ChildSizing.ShrinkVertical = crsScaleChilds
           ChildSizing.Layout = cclLeftToRightThenTopToBottom
           ChildSizing.ControlsPerLine = 1
-          ClientHeight = 92
+          ClientHeight = 89
           ClientWidth = 181
           Items.Strings = (
             'Unknown'
@@ -2356,7 +2354,7 @@ object FormClient: TFormClient
           ChildSizing.ShrinkVertical = crsScaleChilds
           ChildSizing.Layout = cclLeftToRightThenTopToBottom
           ChildSizing.ControlsPerLine = 1
-          ClientHeight = 108
+          ClientHeight = 105
           ClientWidth = 181
           Items.Strings = (
             'Unknown'
@@ -2382,7 +2380,7 @@ object FormClient: TFormClient
           ChildSizing.ShrinkVertical = crsScaleChilds
           ChildSizing.Layout = cclLeftToRightThenTopToBottom
           ChildSizing.ControlsPerLine = 1
-          ClientHeight = 108
+          ClientHeight = 105
           ClientWidth = 181
           Items.Strings = (
             'Unknown / N.A.'
@@ -2409,7 +2407,7 @@ object FormClient: TFormClient
     ChildSizing.ShrinkVertical = crsScaleChilds
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 1
-    ClientHeight = 67
+    ClientHeight = 65
     ClientWidth = 125
     ItemIndex = 0
     Items.Strings = (
@@ -2422,8 +2420,8 @@ object FormClient: TFormClient
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 21
-    Top = 643
+    Height = 23
+    Top = 641
     Width = 753
     Panels = <    
       item
@@ -2447,27 +2445,27 @@ object FormClient: TFormClient
     TabOrder = 7
     object TabSheet2: TTabSheet
       Caption = 'Rack/Slot'
-      ClientHeight = 49
-      ClientWidth = 189
+      ClientHeight = 55
+      ClientWidth = 187
       object Label2: TLabel
         Left = 97
-        Height = 14
+        Height = 13
         Top = 7
-        Width = 27
+        Width = 23
         Caption = 'Rack'
         ParentColor = False
       end
       object Label3: TLabel
         Left = 145
-        Height = 14
+        Height = 13
         Top = 7
-        Width = 21
+        Width = 18
         Caption = 'Slot'
         ParentColor = False
       end
       object EdRack: TEdit
         Left = 94
-        Height = 24
+        Height = 21
         Top = 22
         Width = 41
         OnKeyPress = EdRackKeyPress
@@ -2476,7 +2474,7 @@ object FormClient: TFormClient
       end
       object EdSlot: TEdit
         Left = 136
-        Height = 24
+        Height = 21
         Top = 22
         Width = 41
         OnKeyPress = EdRackKeyPress
@@ -2485,10 +2483,10 @@ object FormClient: TFormClient
       end
       object CBConnType: TComboBox
         Left = 4
-        Height = 27
+        Height = 21
         Top = 22
         Width = 76
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           'PG'
@@ -2501,9 +2499,9 @@ object FormClient: TFormClient
       end
       object Label62: TLabel
         Left = 4
-        Height = 14
+        Height = 13
         Top = 7
-        Width = 63
+        Width = 54
         Caption = 'Connect as'
         ParentColor = False
       end
@@ -2597,9 +2595,9 @@ object FormClient: TFormClient
   object Label63: TLabel
     Cursor = crHandPoint
     Left = 456
-    Height = 14
+    Height = 13
     Top = 56
-    Width = 210
+    Width = 178
     Caption = 'What''s the "smart connect" feature ?'
     Font.CharSet = ANSI_CHARSET
     Font.Color = clBlue
@@ -2615,9 +2613,9 @@ object FormClient: TFormClient
   object Label64: TLabel
     Cursor = crHandPoint
     Left = 456
-    Height = 14
+    Height = 13
     Top = 80
-    Width = 289
+    Width = 244
     Caption = 'Which parameters should I use for the connection?'
     Font.CharSet = ANSI_CHARSET
     Font.Color = clBlue
@@ -2665,4 +2663,4 @@ object FormClient: TFormClient
     left = 520
     top = 184
   end
-end
+end

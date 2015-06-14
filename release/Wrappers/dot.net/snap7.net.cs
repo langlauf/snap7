@@ -1,5 +1,5 @@
 ﻿/*=============================================================================|
-|  PROJECT SNAP7                                                         1.3.0 |
+|  PROJECT SNAP7                                                         1.4.0 |
 |==============================================================================|
 |  Copyright (C) 2013, 2014, 2015 Davide Nardella                              |
 |  All rights reserved.                                                        |
@@ -28,6 +28,7 @@
 |                                                                              |
 |=============================================================================*/
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -59,12 +60,24 @@ namespace Snap7
         public static readonly Int32 p_i32_BRecvTimeout  = 13;
         public static readonly Int32 p_u32_RecoveryTime  = 14;
         public static readonly Int32 p_u32_KeepAliveTime = 15;
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct S7Tag
+        {
+            public Int32 Area;
+            public Int32 DBNumber;
+            public Int32 Start;
+            public Int32 Size;
+            public Int32 WordLen;
+        }
     }
 
     public static class S7
     {
         #region [Help Functions]
-        
+
+        private static Int64 bias = 621355968000000000; // "decimicros" between 0001-01-01 00:00:00 and 1970-01-01 00:00:00
+
         private static int BCDtoByte(byte B)
         {
              return ((B >> 4) * 10) + (B & 0x0F);        
@@ -75,7 +88,14 @@ namespace Snap7
             return (byte)(((Value / 10) << 4) | (Value % 10));
         }
         
-        // Returns the bit at Pos.Bit 
+        private static byte[] CopyFrom(byte[] Buffer, int Pos, int Size)
+        {
+            byte[] Result=new byte[Size];
+            Array.Copy(Buffer, Pos, Result, 0, Size);
+            return Result;
+        }
+
+        #region Get/Set the bit at Pos.Bit
         public static bool GetBitAt(byte[] Buffer, int Pos, int Bit)
         {           
             byte[] Mask = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
@@ -83,86 +103,9 @@ namespace Snap7
             if (Bit > 7) Bit = 7;
             return (Buffer[Pos] & Mask[Bit]) != 0;
         }
-        
-        // Returns a 16 bit signed value (S7 int) -32768..32767
-        public static Int16 GetIntAt(byte[] Buffer, int Pos)
-        {
-            return (Int16)((Buffer[Pos] << 8) | Buffer[Pos + 1]);
-        }
-
-        // Returns a 32 bit signed value (S7 dint) -2147483648..2147483647
-        public static Int32 GetDIntAt(byte[] Buffer, int Pos)
-        {
-            Int32 Result;
-            Result = Buffer[Pos]; Result <<= 8;
-            Result += Buffer[Pos + 1]; Result <<= 8;
-            Result += Buffer[Pos + 2]; Result <<= 8;
-            Result += Buffer[Pos + 3];
-            return Result;
-        }
-
-        // Returns a 16 bit unsigned value (S7 word) 0x0000..0xFFFF
-        public static UInt16 GetWordAt(byte[] Buffer, int Pos)
-        {
-            return (UInt16)((Buffer[Pos] << 8) | Buffer[Pos + 1]);
-        }
-
-        // Returns a 32 bit unsigned value (S7 dword) 0x00000000..0xFFFFFFFF
-        public static UInt32 GetDWordAt(byte[] Buffer, int Pos)
-        {
-            return (UInt32)GetDIntAt(Buffer, Pos);
-        }
-
-        public static Single GetRealAt(byte[] Buffer, int Pos)
-        {
-            Int32 Value = GetDIntAt(Buffer, Pos);
-            byte[] bytes = BitConverter.GetBytes(Value);
-            return BitConverter.ToSingle(bytes, 0);
-        }
-
-        public static DateTime GetDateTimeAt(byte[] Buffer, int Pos)
-        {
-            int Year, Month, Day, Hour, Min, Sec;
-
-            Year = BCDtoByte(Buffer[Pos]);
-            if (Year < 90)
-                Year += 2000;
-            else
-                Year += 1900;
-
-            Month = BCDtoByte(Buffer[Pos + 1]) - 1;
-            Day = BCDtoByte(Buffer[Pos + 2]);
-            Hour = BCDtoByte(Buffer[Pos + 3]);
-            Min = BCDtoByte(Buffer[Pos + 4]);
-            Sec = BCDtoByte(Buffer[Pos + 5]);
-
-            try
-            {
-                return new DateTime(Year, Month, Day, Hour, Min, Sec);
-            }
-            catch (System.ArgumentOutOfRangeException)
-            {
-                return new DateTime(0);
-            }
-
-        }
-        
-        // Thanks to Pablo Agirre for GetStringAt
-        public static string GetStringAt(byte[] Buffer, int Pos)
-        {
-            int size = (int)Buffer[Pos + 1];
-            return Encoding.ASCII.GetString(Buffer, Pos + 2, size);
-        }
-
-        // Same as GetString but gets an Array of char (not S7String)
-        public static string GetCharsAt(byte[] Buffer, int Pos, int Size)
-        {
-            return Encoding.ASCII.GetString(Buffer, Pos , Size);
-        }
-
         public static void SetBitAt(ref byte[] Buffer, int Pos, int Bit, bool Value)
         {
-            byte[] Mask = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
+            byte[] Mask = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 };
             if (Bit < 0) Bit = 0;
             if (Bit > 7) Bit = 7;
 
@@ -171,32 +114,203 @@ namespace Snap7
             else
                 Buffer[Pos] = (byte)(Buffer[Pos] & ~Mask[Bit]);
         }
+        #endregion
 
+        #region Get/Set 8 bit signed value (S7 SInt) -128..127
+        public static int GetSIntAt(byte[] Buffer, int Pos)
+        {
+            int Value = Buffer[Pos];
+            if (Value < 128)
+                return Value;
+            else
+                return (int) (Value - 256);
+        }
+        public static void SetSIntAt(byte[] Buffer, int Pos, int Value)
+        {
+            if (Value < -128) Value = -128;
+            if (Value > 127) Value = 127;
+            Buffer[Pos] = (byte)Value;
+        }
+        #endregion
+
+        #region Get/Set 16 bit signed value (S7 int) -32768..32767
+        public static int GetIntAt(byte[] Buffer, int Pos)
+        {
+            return (int)((Buffer[Pos] << 8) | Buffer[Pos + 1]);
+        }
         public static void SetIntAt(byte[] Buffer, int Pos, Int16 Value)
         {
             Buffer[Pos] = (byte)(Value >> 8);
             Buffer[Pos + 1] = (byte)(Value & 0x00FF);
         }
+        #endregion
 
-        public static void SetDIntAt(byte[] Buffer, int Pos, Int32 Value)
+        #region Get/Set 32 bit signed value (S7 DInt) -2147483648..2147483647
+        public static int GetDIntAt(byte[] Buffer, int Pos)
         {
-            SetDWordAt(Buffer, Pos, (UInt32)Value);
+            int Result;
+            Result = Buffer[Pos]; Result <<= 8;
+            Result += Buffer[Pos + 1]; Result <<= 8;
+            Result += Buffer[Pos + 2]; Result <<= 8;
+            Result += Buffer[Pos + 3];
+            return Result;
         }
-
-        public static void SetWordAt(byte[] Buffer, int Pos, UInt16 Value)
-        {
-            Buffer[Pos] = (byte)(Value >> 8);
-            Buffer[Pos + 1] = (byte)(Value & 0x00FF);
-        }
-
-        public static void SetDWordAt(byte[] Buffer, int Pos, UInt32 Value)
+        public static void SetDIntAt(byte[] Buffer, int Pos, int Value)
         {
             Buffer[Pos + 3] = (byte)(Value & 0xFF);
             Buffer[Pos + 2] = (byte)((Value >> 8) & 0xFF);
             Buffer[Pos + 1] = (byte)((Value >> 16) & 0xFF);
             Buffer[Pos] = (byte)((Value >> 24) & 0xFF);
         }
+        #endregion
 
+        #region Get/Set 64 bit signed value (S7 LInt) -9223372036854775808..9223372036854775807
+        public static Int64 GetLIntAt(byte[] Buffer, int Pos)
+        {
+            Int64 Result;
+            Result = Buffer[Pos]; Result <<= 8;
+            Result += Buffer[Pos + 1]; Result <<= 8;
+            Result += Buffer[Pos + 2]; Result <<= 8;
+            Result += Buffer[Pos + 3]; Result <<= 8;
+            Result += Buffer[Pos + 4]; Result <<= 8;
+            Result += Buffer[Pos + 5]; Result <<= 8;
+            Result += Buffer[Pos + 6]; Result <<= 8;
+            Result += Buffer[Pos + 7]; 
+            return Result;
+        }
+        public static void SetLIntAt(byte[] Buffer, int Pos, Int64 Value)
+        {
+            Buffer[Pos + 7] = (byte)(Value & 0xFF);
+            Buffer[Pos + 6] = (byte)((Value >> 8) & 0xFF);
+            Buffer[Pos + 5] = (byte)((Value >> 16) & 0xFF);
+            Buffer[Pos + 4] = (byte)((Value >> 24) & 0xFF);
+            Buffer[Pos + 3] = (byte)((Value >> 32) & 0xFF);
+            Buffer[Pos + 2] = (byte)((Value >> 40) & 0xFF);
+            Buffer[Pos + 1] = (byte)((Value >> 48) & 0xFF);
+            Buffer[Pos] = (byte)((Value >> 56) & 0xFF);
+        }
+        #endregion 
+
+        #region Get/Set 8 bit unsigned value (S7 USInt) 0..255
+        public static byte GetUSIntAt(byte[] Buffer, int Pos)
+        {
+            return Buffer[Pos];
+        }
+        public static void SetUSIntAt(byte[] Buffer, int Pos, byte Value)
+        {
+            Buffer[Pos] = Value;
+        }
+        #endregion
+
+        #region Get/Set 16 bit unsigned value (S7 UInt) 0..65535
+        public static UInt16 GetUIntAt(byte[] Buffer, int Pos)
+        {
+            return (UInt16)((Buffer[Pos] << 8) | Buffer[Pos + 1]);
+        }
+        public static void SetUIntAt(byte[] Buffer, int Pos, UInt16 Value)
+        {
+            Buffer[Pos] = (byte)(Value >> 8);
+            Buffer[Pos + 1] = (byte)(Value & 0x00FF);
+        }
+        #endregion
+
+        #region Get/Set 32 bit unsigned value (S7 UDInt) 0..4294967296
+        public static UInt32 GetUDIntAt(byte[] Buffer, int Pos)
+        {
+            UInt32 Result;
+            Result = Buffer[Pos]; Result <<= 8;
+            Result |= Buffer[Pos + 1]; Result <<= 8;
+            Result |= Buffer[Pos + 2]; Result <<= 8;
+            Result |= Buffer[Pos + 3];
+            return Result;
+        }
+        public static void SetUDIntAt(byte[] Buffer, int Pos, UInt32 Value)
+        {
+            Buffer[Pos + 3] = (byte)(Value & 0xFF);
+            Buffer[Pos + 2] = (byte)((Value >> 8) & 0xFF);
+            Buffer[Pos + 1] = (byte)((Value >> 16) & 0xFF);
+            Buffer[Pos] = (byte)((Value >> 24) & 0xFF);
+        }
+        #endregion
+
+        #region Get/Set 64 bit unsigned value (S7 ULint) 0..18446744073709551616
+        public static UInt64 GetULIntAt(byte[] Buffer, int Pos)
+        {
+            UInt64 Result;
+            Result = Buffer[Pos]; Result <<= 8;
+            Result |= Buffer[Pos + 1]; Result <<= 8;
+            Result |= Buffer[Pos + 2]; Result <<= 8;
+            Result |= Buffer[Pos + 3]; Result <<= 8;
+            Result |= Buffer[Pos + 4]; Result <<= 8;
+            Result |= Buffer[Pos + 5]; Result <<= 8;
+            Result |= Buffer[Pos + 6]; Result <<= 8;
+            Result |= Buffer[Pos + 7];                  
+            return Result;
+        }
+        public static void SetULintAt(byte[] Buffer, int Pos, UInt64 Value)
+        {
+            Buffer[Pos + 7] = (byte)(Value & 0xFF);
+            Buffer[Pos + 6] = (byte)((Value >> 8) & 0xFF);
+            Buffer[Pos + 5] = (byte)((Value >> 16) & 0xFF);
+            Buffer[Pos + 4] = (byte)((Value >> 24) & 0xFF);
+            Buffer[Pos + 3] = (byte)((Value >> 32) & 0xFF);
+            Buffer[Pos + 2] = (byte)((Value >> 40) & 0xFF);
+            Buffer[Pos + 1] = (byte)((Value >> 48) & 0xFF);
+            Buffer[Pos] = (byte)((Value >> 56) & 0xFF);
+        }
+        #endregion
+
+        #region Get/Set 8 bit word (S7 Byte) 16#00..16#FF
+        public static byte GetByteAt(byte[] Buffer, int Pos)
+        {
+            return Buffer[Pos];
+        }
+        public static void SetByteAt(byte[] Buffer, int Pos, byte Value)
+        {
+            Buffer[Pos] = Value;
+        }       
+        #endregion
+
+        #region Get/Set 16 bit word (S7 Word) 16#0000..16#FFFF
+        public static UInt16 GetWordAt(byte[] Buffer, int Pos)
+        {
+            return GetUIntAt(Buffer,Pos);
+        }
+        public static void SetWordAt(byte[] Buffer, int Pos, UInt16 Value)
+        {
+            SetUIntAt(Buffer, Pos, Value);
+        }
+        #endregion
+
+        #region Get/Set 32 bit word (S7 DWord) 16#00000000..16#FFFFFFFF
+        public static UInt32 GetDWordAt(byte[] Buffer, int Pos)
+        {
+            return GetUDIntAt(Buffer, Pos);
+        }
+        public static void SetDWordAt(byte[] Buffer, int Pos, UInt32 Value)
+        {
+            SetUDIntAt(Buffer, Pos, Value);
+        }
+        #endregion
+
+        #region Get/Set 64 bit word (S7 LWord) 16#0000000000000000..16#FFFFFFFFFFFFFFFF
+        public static UInt64 GetLWordAt(byte[] Buffer, int Pos)
+        {
+            return GetULIntAt(Buffer, Pos);
+        }
+        public static void SetLWordAt(byte[] Buffer, int Pos, UInt64 Value)
+        {
+            SetULintAt(Buffer, Pos, Value);
+        }
+        #endregion
+
+        #region Get/Set 32 bit floating point number (S7 Real) (Range of Single)
+        public static Single GetRealAt(byte[] Buffer, int Pos)
+        {
+            UInt32 Value = GetUDIntAt(Buffer, Pos);
+            byte[] bytes = BitConverter.GetBytes(Value);
+            return BitConverter.ToSingle(bytes, 0);
+        }
         public static void SetRealAt(byte[] Buffer, int Pos, Single Value)
         {
             byte[] FloatArray = BitConverter.GetBytes(Value);
@@ -205,7 +319,55 @@ namespace Snap7
             Buffer[Pos + 2] = FloatArray[1];
             Buffer[Pos + 3] = FloatArray[0];
         }
+        #endregion
 
+        #region Get/Set 64 bit floating point number (S7 LReal) (Range of Double)
+        public static Double GetLRealAt(byte[] Buffer, int Pos)
+        {
+            UInt64 Value = GetULIntAt(Buffer, Pos);
+            byte[] bytes = BitConverter.GetBytes(Value);
+            return BitConverter.ToDouble(bytes, 0);
+        }
+        public static void SetLRealAt(byte[] Buffer, int Pos, Double Value)
+        {
+            byte[] FloatArray = BitConverter.GetBytes(Value);
+            Buffer[Pos] = FloatArray[7];
+            Buffer[Pos + 1] = FloatArray[6];
+            Buffer[Pos + 2] = FloatArray[5];
+            Buffer[Pos + 3] = FloatArray[4];
+            Buffer[Pos + 4] = FloatArray[3];
+            Buffer[Pos + 5] = FloatArray[2];
+            Buffer[Pos + 6] = FloatArray[1];
+            Buffer[Pos + 7] = FloatArray[0];
+        }
+        #endregion
+
+        #region Get/Set DateTime (S7 DATE_AND_TIME)
+        public static DateTime GetDateTimeAt(byte[] Buffer, int Pos)
+        {
+            int Year, Month, Day, Hour, Min, Sec, MSec;
+
+            Year = BCDtoByte(Buffer[Pos]);
+            if (Year < 90)
+                Year += 2000;
+            else
+                Year += 1900;
+
+            Month = BCDtoByte(Buffer[Pos + 1]);
+            Day = BCDtoByte(Buffer[Pos + 2]);
+            Hour = BCDtoByte(Buffer[Pos + 3]);
+            Min = BCDtoByte(Buffer[Pos + 4]);
+            Sec = BCDtoByte(Buffer[Pos + 5]);
+            MSec = (BCDtoByte(Buffer[Pos + 6]) * 10) + (BCDtoByte(Buffer[Pos + 7]) / 10);
+            try
+            {
+                return new DateTime(Year, Month, Day, Hour, Min, Sec, MSec);
+            }
+            catch (System.ArgumentOutOfRangeException)
+            {
+                return new DateTime(0);
+            }
+        }
         public static void SetDateTimeAt(byte[] Buffer, int Pos, DateTime Value)
         {
             int Year = Value.Year;
@@ -214,8 +376,11 @@ namespace Snap7
             int Hour = Value.Hour;
             int Min = Value.Minute;
             int Sec = Value.Second;
-            int Dow = (int) Value.DayOfWeek + 1;
-
+            int Dow = (int)Value.DayOfWeek + 1;
+            // MSecH = First two digits of miliseconds 
+            int MsecH = Value.Millisecond / 10;
+            // MSecL = Last digit of miliseconds
+            int MsecL = Value.Millisecond % 10;
             if (Year > 1999)
                 Year -= 2000;
 
@@ -225,11 +390,144 @@ namespace Snap7
             Buffer[Pos + 3] = ByteToBCD(Hour);
             Buffer[Pos + 4] = ByteToBCD(Min);
             Buffer[Pos + 5] = ByteToBCD(Sec);
-            Buffer[Pos + 6] = 0;
-            Buffer[Pos + 7] = ByteToBCD(Dow);        
+            Buffer[Pos + 6] = ByteToBCD(MsecH);
+            Buffer[Pos + 7] = ByteToBCD(MsecL * 10 + Dow);
+        }
+        #endregion
+
+        #region Get/Set DATE (S7 DATE) 
+        public static DateTime GetDateAt(byte[] Buffer, int Pos)
+        {
+            try
+            {
+                return new DateTime(1990, 1, 1).AddDays(GetIntAt(Buffer, Pos));
+            }
+            catch (System.ArgumentOutOfRangeException)
+            {
+                return new DateTime(0);
+            }
+        }
+        public static void SetDateAt(byte[] Buffer, int Pos, DateTime Value)
+        {
+            SetIntAt(Buffer, Pos, (Int16)(Value - new DateTime(1990, 1, 1)).Days);
         }
 
-        // Thanks to Pablo Agirre for SetStringAt
+        #endregion
+
+        #region Get/Set TOD (S7 TIME_OF_DAY)
+        public static DateTime GetTODAt(byte[] Buffer, int Pos)
+        {
+            try
+            {
+                return new DateTime(0).AddMilliseconds(S7.GetDIntAt(Buffer, Pos));
+            }
+            catch (System.ArgumentOutOfRangeException)
+            {
+                return new DateTime(0);
+            }
+        }
+        public static void SetTODAt(byte[] Buffer, int Pos, DateTime Value)
+        {
+            TimeSpan Time = Value.TimeOfDay;
+            SetDIntAt(Buffer, Pos, (Int32)Math.Round(Time.TotalMilliseconds));          
+        }
+        #endregion
+        
+        #region Get/Set LTOD (S7 1500 LONG TIME_OF_DAY)
+        public static DateTime GetLTODAt(byte[] Buffer, int Pos)
+        {
+            // .NET Tick = 100 ns, S71500 Tick = 1 ns
+            try
+            { 
+                return new DateTime(Math.Abs(GetLIntAt(Buffer,Pos)/100));
+            }
+            catch (System.ArgumentOutOfRangeException)
+            {
+                return new DateTime(0);
+            }
+        }
+        public static void SetLTODAt(byte[] Buffer, int Pos, DateTime Value)
+        {
+            TimeSpan Time = Value.TimeOfDay;
+            SetLIntAt(Buffer, Pos, (Int64)Time.Ticks * 100);
+        }
+
+        #endregion
+
+        #region GET/SET LDT (S7 1500 Long Date and Time)
+        public static DateTime GetLDTAt(byte[] Buffer, int Pos)
+        {
+            try
+            { 
+                return new DateTime((GetLIntAt(Buffer, Pos) / 100) + bias); 
+            }
+            catch (System.ArgumentOutOfRangeException)
+            {
+                return new DateTime(0);
+            }                 
+        }
+        public static void SetLDTAt(byte[] Buffer, int Pos, DateTime Value)
+        {
+            SetLIntAt(Buffer, Pos, (Value.Ticks-bias) * 100);
+        }
+        #endregion
+
+        #region Get/Set DTL (S71200/1500 Date and Time)
+        // Thanks to Johan Cardoen for GetDTLAt
+        public static DateTime GetDTLAt(byte[] Buffer, int Pos)
+        {
+            int Year, Month, Day, Hour, Min, Sec, MSec;
+
+            Year = Buffer[Pos] * 256 + Buffer[Pos + 1];
+            Month = Buffer[Pos + 2];
+            Day = Buffer[Pos + 3];
+            Hour = Buffer[Pos + 5];
+            Min = Buffer[Pos + 6];
+            Sec = Buffer[Pos + 7];
+            MSec = (int)GetUDIntAt(Buffer, Pos + 8)/1000000;
+
+            try
+            {
+                return new DateTime(Year, Month, Day, Hour, Min, Sec, MSec);
+            }
+            catch (System.ArgumentOutOfRangeException)
+            {
+                return new DateTime(0);
+            }
+        }
+        public static void SetDTLAt(byte[] Buffer, int Pos, DateTime Value)
+        {
+            short Year = (short)Value.Year;
+            byte Month = (byte)Value.Month;
+            byte Day = (byte)Value.Day;
+            byte Hour = (byte)Value.Hour;
+            byte Min = (byte)Value.Minute;
+            byte Sec = (byte)Value.Second;
+            byte Dow = (byte)(Value.DayOfWeek + 1);
+
+            Int32 NanoSecs = Value.Millisecond * 1000000;
+
+            var bytes_short = BitConverter.GetBytes(Year);
+
+            Buffer[Pos] = bytes_short[1];
+            Buffer[Pos + 1] = bytes_short[0];
+            Buffer[Pos + 2] = Month;
+            Buffer[Pos + 3] = Day;
+            Buffer[Pos + 4] = Dow;
+            Buffer[Pos + 5] = Hour;
+            Buffer[Pos + 6] = Min;
+            Buffer[Pos + 7] = Sec;
+            SetDIntAt(Buffer, Pos + 8, NanoSecs);
+        }
+        #endregion
+
+        #region Get/Set String (S7 String)
+        // Thanks to Pablo Agirre 
+        public static string GetStringAt(byte[] Buffer, int Pos)
+        {
+            int size = (int)Buffer[Pos + 1];
+            return Encoding.ASCII.GetString(Buffer, Pos + 2, size);
+        }
         public static void SetStringAt(byte[] Buffer, int Pos, int MaxLen, string Value)
         {
             int size = Value.Length;
@@ -237,14 +535,113 @@ namespace Snap7
             Buffer[Pos + 1] = (byte)size;
             Encoding.ASCII.GetBytes(Value, 0, size, Buffer, Pos + 2);
         }
-        
-        // Same as SetStringAt but works with an array of char
+        #endregion
+
+        #region Get/Set Array of char (S7 ARRAY OF CHARS)
+        public static string GetCharsAt(byte[] Buffer, int Pos, int Size)
+        {
+            return Encoding.ASCII.GetString(Buffer, Pos , Size);
+        }
         public static void SetCharsAt(byte[] Buffer, int Pos, string Value)
         {          
             int MaxLen = Buffer.Length - Pos;
             // Truncs the string if there's no room enough        
             if (MaxLen > Value.Length) MaxLen = Value.Length; 
             Encoding.ASCII.GetBytes(Value, 0, MaxLen, Buffer, Pos);
+        }
+        #endregion
+        
+        #endregion [Help Functions]
+    }
+    
+    public class S7MultiVar
+    {
+        #region [MultiRead/Write Helper]
+        private S7Client FClient;
+        private GCHandle[] Handles = new GCHandle[S7Client.MaxVars];
+        private int Count = 0;
+        private S7Client.S7DataItem[] Items = new S7Client.S7DataItem[S7Client.MaxVars];
+
+        public int[] Results = new int[S7Client.MaxVars];
+
+        public S7MultiVar(S7Client Client)
+        {
+            FClient = Client;
+            for (int c = 0; c < S7Client.MaxVars; c++)
+                Results[c] = (int)S7Client.errCliItemNotAvailable;
+        }
+        ~S7MultiVar()
+        {
+            Clear();
+        }
+
+        public bool Add<T>(Int32 Area, Int32 WordLen, Int32 DBNumber, Int32 Start, Int32 Amount, ref T[] Buffer)
+        {
+            return Add(Area, WordLen, DBNumber, Start, Amount, ref Buffer, 0);
+        }
+
+        public bool Add<T>(Int32 Area, Int32 WordLen, Int32 DBNumber, Int32 Start, Int32 Amount, ref T[] Buffer, int Offset)
+        {
+            if (Count < S7Client.MaxVars)
+            {
+                Items[Count].Area = Area;
+                Items[Count].WordLen = WordLen;
+                Items[Count].Result = 0;
+                Items[Count].DBNumber = DBNumber;
+                Items[Count].Start = Start;
+                Items[Count].Amount = Amount;
+                GCHandle handle = GCHandle.Alloc(Buffer, GCHandleType.Pinned);
+                if (IntPtr.Size == 4)
+                    Items[Count].pData = (IntPtr)(handle.AddrOfPinnedObject().ToInt32() + Offset * Marshal.SizeOf(typeof(T)));
+                else
+                    Items[Count].pData = (IntPtr)(handle.AddrOfPinnedObject().ToInt64() + Offset * Marshal.SizeOf(typeof(T)));
+
+                Handles[Count] = handle;
+                Count++;
+                return true;
+            }
+            else
+                return false;
+        }
+
+        public int Read()
+        {
+            int FunctionResult;
+            if (Count > 0)
+            {
+                FunctionResult = FClient.ReadMultiVars(Items, Count);
+                if (FunctionResult == 0)
+                    for (int c = 0; c < S7Client.MaxVars; c++)
+                        Results[c] = Items[c].Result;
+                return FunctionResult;
+            }
+            else
+                return (int)S7Client.errCliFunctionRefused;
+        }
+        public int Write()
+        {
+            int FunctionResult;
+            if (Count > 0)
+            {
+                FunctionResult = FClient.WriteMultiVars(Items, Count);
+                if (FunctionResult == 0)
+                    for (int c = 0; c < S7Client.MaxVars; c++)
+                        Results[c] = Items[c].Result;
+                return FunctionResult;
+            }
+            else
+                return (int)S7Client.errCliFunctionRefused;
+        }
+        public void Clear()
+        {
+            for (int c = 0; c < Count; c++)
+            {
+                if (Handles[c] != null)
+                    Handles[c].Free();
+            }
+            for (int c = 0; c < S7Client.MaxVars; c++)
+                Results[c] = (int)S7Client.errCliItemNotAvailable;
+            Count = 0;
         }
         #endregion
     }
@@ -361,28 +758,6 @@ namespace Snap7
             public Int32 Start;
             public Int32 Amount;
             public IntPtr pData;
-
-            public void Set<T>(Int32 Area, Int32 WordLen, Int32 DBNumber, Int32 Start, Int32 Amount, ref T[] Buffer)
-            {
-                Set(Area, WordLen, DBNumber, Start, Amount, ref Buffer, 0);
-            }
-
-            public void Set<T>(Int32 Area, Int32 WordLen, Int32 DBNumber, Int32 Start, Int32 Amount, ref T[] Buffer, Int32 Offset)
-            {
-                this.Area = Area;
-                this.WordLen = WordLen;
-                this.Result = 0;
-                this.DBNumber = DBNumber;
-                this.Start = Start;
-                this.Amount = Amount;
-                GCHandle handle = GCHandle.Alloc(Buffer, GCHandleType.Pinned);
-                // this.pData = handle.AddrOfPinnedObject() + Offset * Marshal.SizeOf(typeof(T));
-                if (IntPtr.Size == 4)
-                    this.pData = (IntPtr)(handle.AddrOfPinnedObject().ToInt32() + Offset * Marshal.SizeOf(typeof(T)));
-                else
-                    this.pData = (IntPtr)(handle.AddrOfPinnedObject().ToInt64() + Offset * Marshal.SizeOf(typeof(T)));
-                handle.Free();
-            }
         }
 
         // Block List
@@ -446,7 +821,6 @@ namespace Snap7
             public string Family;
             public string Header;
         };
-
 
         public ushort[] TS7BlocksOfType;
 
@@ -732,6 +1106,13 @@ namespace Snap7
             return Cli_ReadArea(Client, Area, DBNumber, Start, Amount, WordLen, Buffer);
         }
 
+        [DllImport(S7Consts.Snap7LibName, EntryPoint = "Cli_ReadArea")]
+        protected static extern int Cli_ReadArea_ptr(IntPtr Client, int Area, int DBNumber, int Start, int Amount, int WordLen, IntPtr Pointer);
+        public int ReadArea(int Area, int DBNumber, int Start, int Amount, int WordLen, IntPtr Pointer)
+        {
+            return Cli_ReadArea_ptr(Client, Area, DBNumber, Start, Amount, WordLen, Pointer);
+        }
+
         [DllImport(S7Consts.Snap7LibName)]
         protected static extern int Cli_WriteArea(IntPtr Client, int Area, int DBNumber, int Start, int Amount, int WordLen, byte[] Buffer);
         public int WriteArea(int Area, int DBNumber, int Start, int Amount, int WordLen, byte[] Buffer)
@@ -740,17 +1121,17 @@ namespace Snap7
         }
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Cli_ReadMultiVars(IntPtr Client, S7DataItem[] Items, int ItemsCount);
+        protected static extern int Cli_ReadMultiVars(IntPtr Client, ref S7DataItem Item, int ItemsCount);
         public int ReadMultiVars(S7DataItem[] Items, int ItemsCount)
         {
-            return Cli_ReadMultiVars(Client, Items, ItemsCount);
+            return Cli_ReadMultiVars(Client, ref Items[0], ItemsCount);
         }
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Cli_WriteMultiVars(IntPtr Client, S7DataItem[] Items, int ItemsCount);
+        protected static extern int Cli_WriteMultiVars(IntPtr Client, ref S7DataItem Item, int ItemsCount);
         public int WriteMultiVars(S7DataItem[] Items, int ItemsCount)
         {
-            return Cli_WriteMultiVars(Client, Items, ItemsCount);
+            return Cli_WriteMultiVars(Client, ref Items[0], ItemsCount);
         }
 
         #endregion
@@ -1409,6 +1790,22 @@ namespace Snap7
         private const int mkEvent = 0;
         private const int mkLog   = 1;
 
+        // S7 Area ID
+        public const byte S7AreaPE = 0x81;
+        public const byte S7AreaPA = 0x82;
+        public const byte S7AreaMK = 0x83;
+        public const byte S7AreaDB = 0x84;
+        public const byte S7AreaCT = 0x1C;
+        public const byte S7AreaTM = 0x1D;
+        // S7 Word Length
+        public const int S7WLBit     = 0x01;
+        public const int S7WLByte    = 0x02;
+        public const int S7WLWord    = 0x04;
+        public const int S7WLDWord   = 0x06;
+        public const int S7WLReal    = 0x08;
+        public const int S7WLCounter = 0x1C;
+        public const int S7WLTimer   = 0x1D;
+
         // Server Area ID  (use with Register/unregister - Lock/unlock Area)
         public static readonly int srvAreaPE = 0;
         public static readonly int srvAreaPA = 1;
@@ -1425,7 +1822,6 @@ namespace Snap7
         public static readonly uint errSrvTooManyDB          = 0x00600000; // Cannot register DB
         public static readonly uint errSrvInvalidParamNumber = 0x00700000; // Invalid param (srv_get/set_param)
         public static readonly uint errSrvCannotChangeParam  = 0x00800000; // Cannot change because running
-
         // TCP Server Event codes
         public static readonly uint evcServerStarted       = 0x00000001;
         public static readonly uint evcServerStopped       = 0x00000002;
@@ -1511,6 +1907,10 @@ namespace Snap7
         public static readonly ushort evrCannotDownload    = 0x000F;
         public static readonly ushort evrUploadInvalidID   = 0x0010;
         public static readonly ushort evrResNotFound       = 0x0011;
+        
+        // Read/Write Operation (to be used into RWCallback)
+        public static readonly int OperationRead  = 0;
+        public static readonly int OperationWrite = 1;
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct USrvEvent
@@ -1537,6 +1937,8 @@ namespace Snap7
             public ushort EvtParam4;
         }
 
+        private Dictionary<Int32, GCHandle> HArea;
+
         private IntPtr Server;
 
         #endregion
@@ -1548,12 +1950,19 @@ namespace Snap7
         public S7Server()
         {
             Server = Srv_Create();
+            HArea = new Dictionary<int,GCHandle>();
         }
 
         [DllImport(S7Consts.Snap7LibName)]
         protected static extern int Srv_Destroy(ref IntPtr Server);
         ~S7Server()
         {
+            foreach(var Item in HArea)
+            {
+                GCHandle handle = Item.Value;
+                if (handle!=null)
+                    handle.Free();
+            }
             Srv_Destroy(ref Server);
         }
         
@@ -1671,17 +2080,36 @@ namespace Snap7
         #region [Data Areas functions]
 
         [DllImport(S7Consts.Snap7LibName)]
-        protected static extern int Srv_RegisterArea(IntPtr Server, Int32 AreaCode, Int32 Index, byte[] pUsrData, Int32 Size);
-        public int RegisterArea(Int32 AreaCode, Int32 Index, byte[] pUsrData, Int32 Size)
+        protected static extern int Srv_RegisterArea(IntPtr Server, Int32 AreaCode, Int32 Index, IntPtr pUsrData, Int32 Size);
+        public int RegisterArea<T>(Int32 AreaCode, Int32 Index, ref T pUsrData, Int32 Size)
         {
-            return Srv_RegisterArea(Server, AreaCode, Index, pUsrData, Size);
+            Int32 AreaUID = (AreaCode << 16) + Index;
+            GCHandle handle = GCHandle.Alloc(pUsrData, GCHandleType.Pinned);
+            int Result = Srv_RegisterArea(Server, AreaCode, Index, handle.AddrOfPinnedObject(), Size);
+            if (Result == 0)
+                HArea.Add(AreaUID, handle);
+            else
+                handle.Free();
+            return Result;
         }
 
         [DllImport(S7Consts.Snap7LibName)]
         protected static extern int Srv_UnregisterArea(IntPtr Server, Int32 AreaCode, Int32 Index);
         public int UnregisterArea(Int32 AreaCode, Int32 Index)
         {
-            return Srv_UnregisterArea(Server, AreaCode, Index);
+            int Result = Srv_UnregisterArea(Server, AreaCode, Index);
+            if (Result == 0)
+            {
+                Int32 AreaUID = (AreaCode << 16) + Index;
+                if (HArea.ContainsKey(AreaUID)) // should be always true
+                {
+                    GCHandle handle = HArea[AreaUID];
+                    if (handle!=null) // should be always true
+                        handle.Free();
+                    HArea.Remove(AreaUID);
+                }
+            }
+            return Result;
         }
 
         [DllImport(S7Consts.Snap7LibName)]
@@ -1702,7 +2130,15 @@ namespace Snap7
 
         #region [Notification functions (Events)]
 
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct RWBuffer
+        {
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1024)] // A telegram cannot exceed PDU size (960 bytes)
+            public byte[] Data;
+        }
+
         public delegate void TSrvCallback(IntPtr usrPtr, ref USrvEvent Event, int Size);
+        public delegate int TSrvRWAreaCallback(IntPtr usrPtr, int Sender, int Operation, ref S7Consts.S7Tag Tag, ref RWBuffer Buffer);
 
         [DllImport(S7Consts.Snap7LibName)]
         protected static extern int Srv_SetEventsCallback(IntPtr Server, TSrvCallback Callback, IntPtr usrPtr);
@@ -1716,6 +2152,13 @@ namespace Snap7
         public int SetReadEventsCallBack(TSrvCallback Callback, IntPtr usrPtr)
         {
             return Srv_SetReadEventsCallback(Server, Callback, usrPtr);
+        }
+
+        [DllImport(S7Consts.Snap7LibName)]
+        protected static extern int Srv_SetRWAreaCallback(IntPtr Server, TSrvRWAreaCallback Callback, IntPtr usrPtr);
+        public int SetRWAreaCallBack(TSrvRWAreaCallback Callback, IntPtr usrPtr)
+        {
+            return Srv_SetRWAreaCallback(Server, Callback, usrPtr);
         }
 
         [DllImport(S7Consts.Snap7LibName)]

@@ -1474,10 +1474,9 @@ end;
 procedure TFormClient.FormCreate(Sender: TObject);
 var
   c: Integer;
-  Platform : string;
+  ThePlatform : string;
   Wide : string;
 begin
-
   // Infamous trick to get the platform size
   // Maybe it could not work ever, but we need only a form caption....
   case SizeOf(NativeUint) of
@@ -1486,11 +1485,11 @@ begin
     else Wide := ' [?? bit]';
   end;
   {$IFDEF MSWINDOWS}
-     Platform:='Windows platform';
+     ThePlatform:='Windows platform';
   {$ELSE}
-     Platform:='Unix platform';
+     ThePlatform:='Unix platform';
   {$ENDIF}
-  Caption:='Snap7 Client Demo - '+Platform+Wide+
+  Caption:='Snap7 Client Demo - '+ThePlatform+Wide+
   {$IFDEF FPC}
     ' [Lazarus]';
   {$ELSE}
@@ -1866,7 +1865,10 @@ begin
 
   // for simplicity we allocate 1k per item
   for c := 0 to 4 do
+  begin
     GetMem(DataItems[c].pdata,1024);
+    fillchar(DataItems[c].pdata^,1024,#0);
+  end;
 
   EditToBuffer(ChEd_1,DataItems[0].pdata);
   EditToBuffer(ChEd_2,DataItems[1].pdata);

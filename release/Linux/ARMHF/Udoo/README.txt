@@ -1,1 +1,0 @@
-Compiled into UDOO Quad / Debian EGLIBC 2.13

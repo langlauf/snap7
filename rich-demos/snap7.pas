@@ -1,5 +1,5 @@
 (*=============================================================================|
-|  PROJECT SNAP7                                                         1.3.0 |
+|  PROJECT SNAP7                                                         1.4.0 |
 |==============================================================================|
 |  Copyright (C) 2013, 2014 Davide Nardella                                    |
 |  All rights reserved.                                                        |
@@ -97,9 +97,19 @@ Const
   JobComplete            = 0;
   JobPending             = 1;
 
+Type
+  TS7Tag = packed record
+    Area      : integer;
+    DBNumber  : integer;
+    Start     : integer;
+    Size      : integer;
+    WordLen   : integer;
+  end;
+  PS7Tag = ^TS7Tag;
 //------------------------------------------------------------------------------
 //                                  PARAMS LIST
 //------------------------------------------------------------------------------
+Const
   p_u16_LocalPort        = 1;
   p_u16_RemotePort       = 2;
   p_i32_PingTimeout      = 3;
@@ -531,6 +541,9 @@ Const
   mkEvent = 0;
   mkLog   = 1;
 
+  OperationRead  = 0;
+  OperationWrite = 1;
+
 // Server Area ID  (use with Register/unregister - Lock/unlock Area)
   srvAreaPE = 0;
   srvAreaPA = 1;
@@ -656,6 +669,8 @@ Type
 
 TSrvCallBack = procedure(usrPtr : pointer; PEvent : PSrvEvent; Size : integer);
 {$IFDEF MSWINDOWS}stdcall;{$ELSE}cdecl;{$ENDIF}
+TSrvRWAreaCallBack = function(usrPtr : pointer; Sender, Operation : integer; PTag : PS7Tag; pUsrData : pointer) : integer;
+{$IFDEF MSWINDOWS}stdcall;{$ELSE}cdecl;{$ENDIF}
 
 Const
   // Server status
@@ -700,6 +715,8 @@ function Srv_SetMask(Server : S7Object; MaskKind : integer; Mask : longword) : i
 function Srv_SetEventsCallback(Server : S7Object; CallBack, usrPtr : pointer) : integer;
 {$IFDEF MSWINDOWS}stdcall;{$ELSE}cdecl;{$ENDIF}
 function Srv_SetReadEventsCallback(Server : S7Object; CallBack, usrPtr : pointer) : integer;
+{$IFDEF MSWINDOWS}stdcall;{$ELSE}cdecl;{$ENDIF}
+function Srv_SetRWAreaCallback(Server : S7Object; CallBack, usrPtr : pointer) : integer;
 {$IFDEF MSWINDOWS}stdcall;{$ELSE}cdecl;{$ENDIF}
 function Srv_ErrorText(Error : integer; Text : PAnsiChar; TextLen : integer) : integer;
 {$IFDEF MSWINDOWS}stdcall;{$ELSE}cdecl;{$ENDIF}
@@ -940,6 +957,7 @@ Type
     function ClearEvents : integer;
     function SetEventsCallback(CallBack, usrPtr : pointer) : integer;
     function SetReadEventsCallback(CallBack, usrPtr : pointer) : integer;
+    function SetRWAreaCallback(CallBack, usrPtr : pointer) : integer;
     // Properties
     property EventsMask : longword read GetEventsMask write SetEventsMask;
     property LogMask : longword read GetLogMask write SetLogMask;
@@ -1001,36 +1019,37 @@ Type
     property SendTime : longword read GetSendTime;
     property RecvTime : longword read GetRecvTime;
   end;
+
 //******************************************************************************
 //                                S7 CONVERSION CLASS
 //******************************************************************************
   TS7Type = (S7Int, S7DInt, S7Word, S7DWord, S7Real, S7DT_To_DateTime, DateTime_To_S7DT);
 
-  S7 = class
+  TS7Helper = class
   private
-    class function GetInt(pval: pointer): smallint; static;
-    class procedure SetInt(pval: pointer; const Value: smallint); static;
-    class function GetWord(pval: pointer): word; static;
-    class procedure SetWord(pval: pointer; const Value: word); static;
-    class function GetDInt(pval: pointer): smallint; static;
-    class procedure SetDInt(pval: pointer; const Value: smallint);static;
-    class function GetDWord(pval: pointer): longword; static;
-    class procedure SetDWord(pval: pointer; const Value: longword); static;
-    class function GetDateTime(pval: pointer): TDateTime; static;
-    class procedure SetDateTime(pval: pointer; const Value: TDateTime); static;
-    class function GetReal(pval: pointer): single; static;
-    class procedure SetReal(pval: pointer; const Value: single); static;
-    class function GetBit(pval: pointer; BitIndex: integer): boolean; static;
-    class procedure SetBit(pval: pointer; BitIndex: integer; const Value: boolean); static;
+    function GetInt(pval: pointer): smallint;
+    procedure SetInt(pval: pointer; const Value: smallint);
+    function GetWord(pval: pointer): word;
+    procedure SetWord(pval: pointer; const Value: word);
+    function GetDInt(pval: pointer): longint;
+    procedure SetDInt(pval: pointer; const Value: longint);
+    function GetDWord(pval: pointer): longword;
+    procedure SetDWord(pval: pointer; const Value: longword);
+    function GetDateTime(pval: pointer): TDateTime;
+    procedure SetDateTime(pval: pointer; const Value: TDateTime);
+    function GetReal(pval: pointer): single;
+    procedure SetReal(pval: pointer; const Value: single);
+    function GetBit(pval: pointer; BitIndex: integer): boolean;
+    procedure SetBit(pval: pointer; BitIndex: integer; const Value: boolean);
   public
-    class procedure Reverse(pval : pointer; const S7Type : TS7Type); static;
-    class property ValBit[pval : pointer; BitIndex : integer] : boolean read GetBit write SetBit;
-    class property ValInt[pval : pointer] : smallint read GetInt write SetInt;
-    class property ValDInt[pval : pointer] : smallint read GetDInt write SetDInt;
-    class property ValWord[pval : pointer] : word read GetWord write SetWord;
-    class property ValDWord[pval : pointer] : longword read GetDWord write SetDWord;
-    class property ValReal[pval : pointer] : single read GetReal write SetReal;
-    class property ValDateTime[pval : pointer] : TDateTime read GetDateTime write SetDateTime;
+    procedure Reverse(pval : pointer; const S7Type : TS7Type);
+    property ValBit[pval : pointer; BitIndex : integer] : boolean read GetBit write SetBit;
+    property ValInt[pval : pointer] : smallint read GetInt write SetInt;
+    property ValDInt[pval : pointer] : longint read GetDInt write SetDInt;
+    property ValWord[pval : pointer] : word read GetWord write SetWord;
+    property ValDWord[pval : pointer] : longword read GetDWord write SetDWord;
+    property ValReal[pval : pointer] : single read GetReal write SetReal;
+    property ValDateTime[pval : pointer] : TDateTime read GetDateTime write SetDateTime;
   end;
 
 // Error text
@@ -1039,7 +1058,8 @@ function SrvErrorText(Error : integer) : string;
 function ParErrorText(Error : integer) : string;
 function SrvEventText(var Event : TSrvEvent) : string;
 
-// Conversion utils
+Var
+  S7 : TS7Helper;
 
 implementation
 Uses
@@ -1197,6 +1217,7 @@ function Srv_GetMask;                 external snaplib name 'Srv_GetMask';
 function Srv_SetMask;                 external snaplib name 'Srv_SetMask';
 function Srv_SetEventsCallback;       external snaplib name 'Srv_SetEventsCallback';
 function Srv_SetReadEventsCallback;   external snaplib name 'Srv_SetReadEventsCallback';
+function Srv_SetRWAreaCallback;       external snaplib name 'Srv_SetRWAreaCallback';
 function Srv_ErrorText;               external snaplib name 'Srv_ErrorText';
 function Srv_EventText;               external snaplib name 'Srv_EventText';
 //******************************************************************************
@@ -1780,6 +1801,11 @@ begin
   Result:=Srv_SetReadEventsCallback(HS,CallBack,usrPtr);
 end;
 //------------------------------------------------------------------------------
+function TS7Server.SetRWAreaCallback(CallBack, usrPtr : pointer) : integer;
+begin
+  Result:=Srv_SetRWAreaCallback(HS,CallBack,usrPtr);
+end;
+//------------------------------------------------------------------------------
 procedure TS7Server.SetEventsMask(const Value: longword);
 begin
   Srv_SetMask(HS, mkEvent, Value);
@@ -1979,7 +2005,7 @@ end;
 //******************************************************************************
 //  S7 CLASS IMPLEMENTATION
 //******************************************************************************
-class function S7.GetBit(pval: pointer; BitIndex: integer): boolean;
+function TS7Helper.GetBit(pval: pointer; BitIndex: integer): boolean;
 Const
   Mask : array[0..7] of byte = ($01,$02,$04,$08,$10,$20,$40,$80);
 begin
@@ -1988,7 +2014,7 @@ begin
   Result:=pbyte(pval)^ and Mask[BitIndex] <> 0;
 end;
 //------------------------------------------------------------------------------
-class function S7.GetDateTime(pval: pointer): TDateTime;
+function TS7Helper.GetDateTime(pval: pointer): TDateTime;
 Type
   S7DT   = packed array[0..7] of byte;
 Var
@@ -2031,53 +2057,53 @@ begin
   TryEncodeDateTime(YY,MM,DD,HH,NN,SS,MS,Result);
 end;
 //------------------------------------------------------------------------------
-class function S7.GetDInt(pval: pointer): smallint;
+function TS7Helper.GetDInt(pval: pointer): longint;
 Var
   DW : packed array[0..3] of byte absolute Result;
 begin
-  DW[0]:=(pbyte(pval)+3)^;
-  DW[1]:=(pbyte(pval)+2)^;
-  DW[2]:=(pbyte(pval)+1)^;
+  DW[0]:=pbyte(NativeInt(pval)+3)^;
+  DW[1]:=pbyte(NativeInt(pval)+2)^;
+  DW[2]:=pbyte(NativeInt(pval)+1)^;
   DW[3]:=pbyte(pval)^;
 end;
 //------------------------------------------------------------------------------
-class function S7.GetDWord(pval: pointer): longword;
+function TS7Helper.GetDWord(pval: pointer): longword;
 Var
   DW : packed array[0..3] of byte absolute Result;
 begin
-  DW[0]:=(pbyte(pval)+3)^;
-  DW[1]:=(pbyte(pval)+2)^;
-  DW[2]:=(pbyte(pval)+1)^;
+  DW[0]:=pbyte(NativeInt(pval)+3)^;
+  DW[1]:=pbyte(NativeInt(pval)+2)^;
+  DW[2]:=pbyte(NativeInt(pval)+1)^;
   DW[3]:=pbyte(pval)^;
 end;
 //------------------------------------------------------------------------------
-class function S7.GetInt(pval: pointer): smallint;
+function TS7Helper.GetInt(pval: pointer): smallint;
 Var
   BW : packed array[0..1] of byte absolute Result;
 begin
-  BW[0]:=(pbyte(pval)+1)^;
+  BW[0]:=pbyte(NativeInt(pval)+1)^;
   BW[1]:=pbyte(pval)^;
 end;
 //------------------------------------------------------------------------------
-class function S7.GetReal(pval: pointer): single;
+function TS7Helper.GetReal(pval: pointer): single;
 Var
   DW : packed array[0..3] of byte absolute Result;
 begin
-  DW[0]:=(pbyte(pval)+3)^;
-  DW[1]:=(pbyte(pval)+2)^;
-  DW[2]:=(pbyte(pval)+1)^;
+  DW[0]:=pbyte(NativeInt(pval)+3)^;
+  DW[1]:=pbyte(NativeInt(pval)+2)^;
+  DW[2]:=pbyte(NativeInt(pval)+1)^;
   DW[3]:=pbyte(pval)^;
 end;
 //------------------------------------------------------------------------------
-class function S7.GetWord(pval: pointer): word;
+function TS7Helper.GetWord(pval: pointer): word;
 Var
   BW : packed array[0..1] of byte absolute Result;
 begin
-  BW[0]:=(pbyte(pval)+1)^;
+  BW[0]:=pbyte(NativeInt(pval)+1)^;
   BW[1]:=pbyte(pval)^;
 end;
 //------------------------------------------------------------------------------
-class procedure S7.Reverse(pval: pointer; const S7Type: TS7Type);
+procedure TS7Helper.Reverse(pval: pointer; const S7Type: TS7Type);
 Var
   DT : TDateTime;
 begin
@@ -2086,7 +2112,7 @@ begin
     S7Word: SetWord(pval, pword(pval)^);
     S7DInt,
     S7DWord,
-    S7Real: SetWord(pval, plongword(pval)^);
+    S7Real: SetDWord(pval, plongword(pval)^);
     S7DT_To_DateTime: pDateTime(pval)^:=GetDateTime(pval);
     DateTime_To_S7DT: begin
       DT:=pdateTime(pval)^;
@@ -2095,7 +2121,7 @@ begin
   end;
 end;
 //------------------------------------------------------------------------------
-class procedure S7.SetBit(pval: pointer; BitIndex: integer; const Value: boolean);
+procedure TS7Helper.SetBit(pval: pointer; BitIndex: integer; const Value: boolean);
 Const
   Mask : array[0..7] of byte = ($01,$02,$04,$08,$10,$20,$40,$80);
 begin
@@ -2107,7 +2133,7 @@ begin
     pbyte(pval)^ := pbyte(pval)^ and not Mask[BitIndex];
 end;
 //------------------------------------------------------------------------------
-class procedure S7.SetDateTime(pval: pointer; const Value: TDateTime);
+procedure TS7Helper.SetDateTime(pval: pointer; const Value: TDateTime);
 Type
   DATE_AND_TIME = packed array[1..8] of byte;
   pDT = ^DATE_AND_TIME;
@@ -2151,49 +2177,49 @@ begin
   DT^[8]:=LO(MsDOW);
 end;
 //------------------------------------------------------------------------------
-class procedure S7.SetDInt(pval: pointer; const Value: smallint);
+procedure TS7Helper.SetDInt(pval: pointer; const Value: longint);
 Var
   DW : packed array[0..3] of byte absolute value;
 begin
   pbyte(pval)^:=DW[3];
-  (pbyte(pval)+1)^:=DW[2];
-  (pbyte(pval)+2)^:=DW[1];
-  (pbyte(pval)+3)^:=DW[0];
+  pbyte(NativeInt(pval)+1)^:=DW[2];
+  pbyte(NativeInt(pval)+2)^:=DW[1];
+  pbyte(NativeInt(pval)+3)^:=DW[0];
 end;
 //------------------------------------------------------------------------------
-class procedure S7.SetDWord(pval: pointer; const Value: longword);
+procedure TS7Helper.SetDWord(pval: pointer; const Value: longword);
 Var
   DW : packed array[0..3] of byte absolute value;
 begin
   pbyte(pval)^:=DW[3];
-  (pbyte(pval)+1)^:=DW[2];
-  (pbyte(pval)+2)^:=DW[1];
-  (pbyte(pval)+3)^:=DW[0];
+  pbyte(NativeInt(pval)+1)^:=DW[2];
+  pbyte(NativeInt(pval)+2)^:=DW[1];
+  pbyte(NativeInt(pval)+3)^:=DW[0];
 end;
 //------------------------------------------------------------------------------
-class procedure S7.SetInt(pval: pointer; const Value: smallint);
+procedure TS7Helper.SetInt(pval: pointer; const Value: smallint);
 Var
   BW : packed array[0..1] of byte absolute value;
 begin
-  (pbyte(pval)+1)^:=BW[0];
+  pbyte(NativeInt(pval)+1)^:=BW[0];
   pbyte(pval)^:=BW[1];
 end;
 //------------------------------------------------------------------------------
-class procedure S7.SetReal(pval: pointer; const Value: single);
+procedure TS7Helper.SetReal(pval: pointer; const Value: single);
 Var
   DW : packed array[0..3] of byte absolute value;
 begin
   pbyte(pval)^:=DW[3];
-  (pbyte(pval)+1)^:=DW[2];
-  (pbyte(pval)+2)^:=DW[1];
-  (pbyte(pval)+3)^:=DW[0];
+  pbyte(NativeInt(pval)+1)^:=DW[2];
+  pbyte(NativeInt(pval)+2)^:=DW[1];
+  pbyte(NativeInt(pval)+3)^:=DW[0];
 end;
 //------------------------------------------------------------------------------
-class procedure S7.SetWord(pval: pointer; const Value: word);
+procedure TS7Helper.SetWord(pval: pointer; const Value: word);
 Var
   BW : packed array[0..1] of byte absolute value;
 begin
-  (pbyte(pval)+1)^:=BW[0];
+  pbyte(NativeInt(pval)+1)^:=BW[0];
   pbyte(pval)^:=BW[1];
 end;
 //******************************************************************************
@@ -2241,6 +2267,10 @@ end;
 
 initialization
 
+  S7 := TS7Helper.Create;
+
 finalization
+
+  S7.Free;
 
 end.

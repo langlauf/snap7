@@ -267,8 +267,12 @@ int TMsgSocket::WaitForData(int Size, int Timeout)
 void TMsgSocket::SetSocketOptions()
 {
     int NoDelay = 1;
+	int KeepAlive = 1;
     LastTcpError=0;
     SockCheck(setsockopt(FSocket, IPPROTO_TCP, TCP_NODELAY,(char*)&NoDelay, sizeof(NoDelay)));
+
+	if (LastTcpError==0)
+        SockCheck(setsockopt(FSocket, SOL_SOCKET, SO_KEEPALIVE,(char*)&KeepAlive, sizeof(KeepAlive)));
 }
 //---------------------------------------------------------------------------
 int TMsgSocket::SockCheck(int SockResult)
@@ -629,7 +633,7 @@ static int PingKind;
 // iphlpapi, is loaded dinamically because if this fails we can still try
 // to use raw sockets
 
-static char const *iphlpapi = "iphlpapi.dll";
+static char const *iphlpapi = "\\iphlpapi.dll";
 #pragma pack(1)
 typedef byte TTxBuffer[40];
 #pragma pack()
@@ -659,7 +663,17 @@ static bool IcmpAvail = false;
 
 bool IcmpInit()
 {
-    IcmpDllHandle = LoadLibraryA(iphlpapi);
+	char iphlppath[MAX_PATH+12];
+
+	int PathLen = GetSystemDirectoryA(iphlppath, MAX_PATH);
+	if (PathLen != 0)
+	{
+		strcat(iphlppath, iphlpapi);
+		IcmpDllHandle = LoadLibraryA(iphlppath);
+	}
+	else
+		IcmpDllHandle = 0;
+
     if (IcmpDllHandle != 0)
     {
         IcmpCreateFile=(pfn_IcmpCreateFile)GetProcAddress(IcmpDllHandle,"IcmpCreateFile");

@@ -1,4 +1,4 @@
-; dlltool --base-file C:\Users\DAVIDE~1.MAS\AppData\Local\Temp\cca03916.base --output-exp snap7.exp --dllname snap7.dll --output-def ../../bin/Legacy/win32/snap7.def --no-export-all-symbols --add-stdcall-alias --exclude-symbol=DllMainCRTStartup@12 --def C:\Users\DAVIDE~1.MAS\AppData\Local\Temp\cca03916.def
+; dlltool --base-file C:\Users\DAVIDE~1.NAR\AppData\Local\Temp\cca04712.base --output-exp snap7.exp --dllname snap7.dll --output-def ../../bin/Legacy/win32/snap7.def --no-export-all-symbols --add-stdcall-alias --exclude-symbol=DllMainCRTStartup@12 --def C:\Users\DAVIDE~1.NAR\AppData\Local\Temp\cca04712.def
 EXPORTS
 	Cli_ABRead = Cli_ABRead@16 @ 1
 	Cli_ABRead@16 @ 2
@@ -240,15 +240,17 @@ EXPORTS
 	Srv_SetMask@12 @ 238
 	Srv_SetParam = Srv_SetParam@12 @ 239
 	Srv_SetParam@12 @ 240
-	Srv_SetReadEventsCallback = Srv_SetReadEventsCallback@12 @ 241
-	Srv_SetReadEventsCallback@12 @ 242
-	Srv_Start = Srv_Start@4 @ 243
-	Srv_Start@4 @ 244
-	Srv_StartTo = Srv_StartTo@8 @ 245
-	Srv_StartTo@8 @ 246
-	Srv_Stop = Srv_Stop@4 @ 247
-	Srv_Stop@4 @ 248
-	Srv_UnlockArea = Srv_UnlockArea@12 @ 249
-	Srv_UnlockArea@12 @ 250
-	Srv_UnregisterArea = Srv_UnregisterArea@12 @ 251
-	Srv_UnregisterArea@12 @ 252
+	Srv_SetRWAreaCallback = Srv_SetRWAreaCallback@12 @ 241
+	Srv_SetRWAreaCallback@12 @ 242
+	Srv_SetReadEventsCallback = Srv_SetReadEventsCallback@12 @ 243
+	Srv_SetReadEventsCallback@12 @ 244
+	Srv_Start = Srv_Start@4 @ 245
+	Srv_Start@4 @ 246
+	Srv_StartTo = Srv_StartTo@8 @ 247
+	Srv_StartTo@8 @ 248
+	Srv_Stop = Srv_Stop@4 @ 249
+	Srv_Stop@4 @ 250
+	Srv_UnlockArea = Srv_UnlockArea@12 @ 251
+	Srv_UnlockArea@12 @ 252
+	Srv_UnregisterArea = Srv_UnregisterArea@12 @ 253
+	Srv_UnregisterArea@12 @ 254

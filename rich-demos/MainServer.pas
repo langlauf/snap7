@@ -49,6 +49,7 @@ type
     { Private declarations }
     Server : TS7Server;
     FMask : longword;
+    TIM : packed array[0..DBSize-1] of byte;
     DB1 : packed array[0..DBSize-1] of byte;
     DB2 : packed array[0..DBSize-1] of byte;
     DB3 : packed array[0..DBSize-1] of byte;
@@ -162,7 +163,7 @@ end;
 
 procedure TFrmServer.FormCreate(Sender: TObject);
 var
-  Platform : string;
+  ThePlatform : string;
   Wide : string;
 begin
   // Cosmetics
@@ -174,11 +175,11 @@ begin
     else Wide := ' [?? bit]';
   end;
   {$IFDEF MSWINDOWS}
-     Platform:='Windows platform';
+     ThePlatform:='Windows platform';
   {$ELSE}
      Platform:='Unix platform';
   {$ENDIF}
-  Caption:='Snap7 Server Demo - '+Platform+Wide+
+  Caption:='Snap7 Server Demo - '+ThePlatform+Wide+
   {$IFDEF FPC}
     ' [Lazarus]';
   {$ELSE}
@@ -202,6 +203,7 @@ begin
                       SizeOf(DB1));   // Its size
   Server.RegisterArea(srvAreaDB,2,@DB2,SizeOf(DB2)); // same as above
   Server.RegisterArea(srvAreaDB,3,@DB3,SizeOf(DB3)); // same as above
+  Server.RegisterArea(srvAreaTM,0,@TIM,SizeOf(TIM));
   // Setup the callback
   Server.SetEventsCallback(@ServerCallback, self);
   // Note
