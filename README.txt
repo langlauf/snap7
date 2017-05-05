@@ -1,4 +1,4 @@
-Snap7 Package 1.4.1 (See History.txt for details)
+Snap7 Package 1.4.2 (See History.txt for details)
 
 The files deployed differs only for their compression method, their content is the same.
 
